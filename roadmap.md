@@ -82,7 +82,7 @@ bash -l -c 'cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTes
 
 Goal: the sandbox can build an empty Compose app with `./gradlew assembleDebug` and run JVM unit tests.
 
-- [ ] **WS-0.1** Install JDK 21 and the Android SDK in the sandbox and persist the environment
+- [x] **WS-0.1** Install JDK 21 and the Android SDK in the sandbox and persist the environment (Commit: none — environment only)
   - **Repos:** none (environment only; nothing to commit)
   - **Read:** /etc/sandbox-persistent.sh
   - **Edit:** /etc/sandbox-persistent.sh, /home/agent/.gradle/gradle.properties
@@ -101,15 +101,12 @@ Goal: the sandbox can build an empty Compose app with `./gradlew assembleDebug` 
        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
        ```
-    4. Append the following block to `/etc/sandbox-persistent.sh` (guarded so PATH does not grow on every command; the file is sourced before every shell command):
+    4. Append the following block to `/etc/sandbox-persistent.sh` (the file is sourced before every shell command; the `case` guard keeps PATH from growing. Do **not** use a flag variable such as `WINGSPAN_ENV_DONE` as the guard — the harness preserves exported variables between commands but resets `PATH`, so a flag guard would skip the PATH prefix forever after the first sourcing):
        ```bash
-       if [ -z "${WINGSPAN_ENV_DONE:-}" ]; then
-         export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-         export ANDROID_HOME=/home/agent/android-sdk
-         export ANDROID_SDK_ROOT=$ANDROID_HOME
-         export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-         export WINGSPAN_ENV_DONE=1
-       fi
+       export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+       export ANDROID_HOME=/home/agent/android-sdk
+       export ANDROID_SDK_ROOT=$ANDROID_HOME
+       case ":$PATH:" in *":$JAVA_HOME/bin:"*) ;; *) export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH ;; esac
        ```
     5. Create `/home/agent/.gradle/gradle.properties` with proxy settings copied from the current value of `echo "$JAVA_TOOL_OPTIONS"` (expected host `gateway.docker.internal`, port `3128`):
        ```properties
@@ -120,8 +117,8 @@ Goal: the sandbox can build an empty Compose app with `./gradlew assembleDebug` 
        systemProp.http.nonProxyHosts=localhost|127.*|[::1]|gateway.docker.internal
        org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
        ```
-  - **Verify:** `bash -l -c 'java -version 2>&1 | head -1; echo JAVA_HOME=$JAVA_HOME; sdkmanager --list_installed 2>/dev/null | grep -E "platforms;android-36|build-tools;36.0.0|platform-tools"'`
-  - **Done when:** `java -version` reports 21.x; `JAVA_HOME` points at the JDK 21 directory; the three SDK packages are listed as installed.
+  - **Verify:** `bash -l -c 'java -version 2>&1 | grep -v "Picked up" | head -1; echo JAVA_HOME=$JAVA_HOME; which sdkmanager; sdkmanager --list_installed 2>/dev/null | grep -E "platforms[;/]android-36|build-tools[;/]36.0.0|platform-tools"'` (the bundled `sdkmanager` self-updates to a newer CLI that prints `/`-delimited package names, hence `[;/]`)
+  - **Done when:** `java -version` reports 21.x; `JAVA_HOME` points at the JDK 21 directory; `which sdkmanager` resolves under `$ANDROID_HOME/cmdline-tools/latest/bin`; the three SDK packages are listed as installed.
 
 - [ ] **WS-0.2** Create the Gradle wrapper, root build files, version catalog, and gitignore
   - **Repos:** wingspan
