@@ -120,7 +120,7 @@ Goal: the sandbox can build an empty Compose app with `./gradlew assembleDebug` 
   - **Verify:** `bash -l -c 'java -version 2>&1 | grep -v "Picked up" | head -1; echo JAVA_HOME=$JAVA_HOME; which sdkmanager; sdkmanager --list_installed 2>/dev/null | grep -E "platforms[;/]android-36|build-tools[;/]36.0.0|platform-tools"'` (the bundled `sdkmanager` self-updates to a newer CLI that prints `/`-delimited package names, hence `[;/]`)
   - **Done when:** `java -version` reports 21.x; `JAVA_HOME` points at the JDK 21 directory; `which sdkmanager` resolves under `$ANDROID_HOME/cmdline-tools/latest/bin`; the three SDK packages are listed as installed.
 
-- [ ] **WS-0.2** Create the Gradle wrapper, root build files, version catalog, and gitignore
+- [x] **WS-0.2** Create the Gradle wrapper, root build files, version catalog, and gitignore (Commit: e64fa22)
   - **Repos:** wingspan
   - **Read:** .gitignore
   - **Edit:** .gitignore, settings.gradle.kts, build.gradle.kts, gradle.properties, gradle/libs.versions.toml
