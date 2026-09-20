@@ -13,3 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "wingspan"
+include(":app")
