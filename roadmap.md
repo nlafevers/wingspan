@@ -344,7 +344,7 @@ Goal: the sandbox can build an empty Compose app with `./gradlew assembleDebug` 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug && ls -la app/build/outputs/apk/debug/app-debug.apk` (first run downloads all dependencies; allow up to 10 minutes and run in the background if needed)
   - **Done when:** `BUILD SUCCESSFUL` and `app-debug.apk` exists.
 
-- [ ] **WS-0.4** Add the launcher icon and a smoke unit test
+- [x] **WS-0.4** Add the launcher icon and a smoke unit test (Commit: 6b887d8)
   - **Repos:** wingspan
   - **Read:** app/src/main/AndroidManifest.xml
   - **Edit:** app/src/main/AndroidManifest.xml, app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml, app/src/main/res/drawable/ic_launcher_foreground.xml, app/src/main/res/values/colors.xml, app/src/test/java/com/wingspan/app/SmokeTest.kt
