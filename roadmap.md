@@ -232,7 +232,7 @@ Goal: the sandbox can build an empty Compose app with `./gradlew assembleDebug` 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew --version && ./gradlew help --no-daemon` (the second command downloads AGP and Kotlin plugins; allow up to 10 minutes)
   - **Done when:** `./gradlew --version` prints `Gradle 8.14.5` and a JVM of 21.x; `./gradlew help` finishes with `BUILD SUCCESSFUL`.
 
-- [ ] **WS-0.3** Create the `app` module with an empty Compose activity and all Phase 1 dependencies
+- [x] **WS-0.3** Create the `app` module with an empty Compose activity and all Phase 1 dependencies (Commit: 7d17a65)
   - **Repos:** wingspan
   - **Read:** settings.gradle.kts, gradle/libs.versions.toml
   - **Edit:** settings.gradle.kts, app/build.gradle.kts, app/src/main/AndroidManifest.xml, app/src/main/java/com/wingspan/app/MainActivity.kt, app/src/main/java/com/wingspan/app/ui/theme/Theme.kt
