@@ -53,3 +53,12 @@ go.work.sum
 
 # env file
 .env
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+captures/
+.kotlin/
