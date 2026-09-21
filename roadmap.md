@@ -374,7 +374,7 @@ Acceptance criteria for Phase 0:
 
 Goal: a pure-Kotlin, unit-tested ballistics model that turns load settings into maximum and effective pellet ranges.
 
-- [ ] **WS-1.1** Add shot, material, choke tables and unit constants
+- [x] **WS-1.1** Add shot, material, choke tables and unit constants (Commit: c3d5b6b)
   - **Repos:** wingspan
   - **Read:** app/src/test/java/com/wingspan/app/SmokeTest.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/ShotSize.kt, app/src/main/java/com/wingspan/app/domain/ballistics/PelletMaterial.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Choke.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt, app/src/test/java/com/wingspan/app/domain/ballistics/TablesTest.kt
