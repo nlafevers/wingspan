@@ -628,7 +628,7 @@ Goal: a MapLibre map with switchable USGS/Esri basemaps, live GPS or manual shoo
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: blue dot with accuracy circle follows GPS; toggling manual mode and long-pressing moves an orange dot; "My location" recenters.
 
-- [ ] **WS-4.4** Add a line no-fire zone type across the geometry and data layers
+- [x] **WS-4.4** Add a line no-fire zone type across the geometry and data layers (Commit: a7f43237a23596021d25dce924db6d8075983b7e)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/main/java/com/wingspan/app/domain/geo/FanCalculator.kt, app/src/main/java/com/wingspan/app/data/db/ZoneEntity.kt, app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/main/java/com/wingspan/app/data/geojson/GeoJsonCodec.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/main/java/com/wingspan/app/domain/geo/FanCalculator.kt, app/src/main/java/com/wingspan/app/data/db/ZoneEntity.kt, app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/main/java/com/wingspan/app/data/geojson/GeoJsonCodec.kt, app/src/test/java/com/wingspan/app/domain/geo/Geometry2DTest.kt, app/src/test/java/com/wingspan/app/domain/geo/FanCalculatorTest.kt, app/src/test/java/com/wingspan/app/data/geojson/GeoJsonCodecTest.kt
