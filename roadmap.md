@@ -429,7 +429,7 @@ Acceptance criteria for Phase 1:
 
 Goal: pure-Kotlin geometry that projects lat/lon to local meters, tests rays against zones, and produces range fans with bearings.
 
-- [ ] **WS-2.1** Add lat/lon types, ENU projection, and 2-D primitives
+- [x] **WS-2.1** Add lat/lon types, ENU projection, and 2-D primitives (Commit: 09f872a)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/geo/LatLon.kt, app/src/main/java/com/wingspan/app/domain/geo/EnuProjection.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/test/java/com/wingspan/app/domain/geo/Geometry2DTest.kt
