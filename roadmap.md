@@ -524,7 +524,7 @@ Goal: Room persistence for zones and snapshots, DataStore-backed settings, GeoJS
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew testDebugUnitTest`
   - **Done when:** `GeoJsonCodecTest` passes.
 
-- [ ] **WS-3.4** Add `SnapshotRepository`, `AppContainer`, and `WingspanApplication`
+- [x] **WS-3.4** Add `SnapshotRepository`, `AppContainer`, and `WingspanApplication` (Commit: 44bc250)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/db/SnapshotDao.kt, app/src/main/java/com/wingspan/app/data/db/SnapshotEntity.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/main/AndroidManifest.xml
   - **Edit:** app/src/main/java/com/wingspan/app/data/SnapshotRepository.kt, app/src/main/java/com/wingspan/app/AppContainer.kt, app/src/main/java/com/wingspan/app/WingspanApplication.kt, app/src/main/AndroidManifest.xml
