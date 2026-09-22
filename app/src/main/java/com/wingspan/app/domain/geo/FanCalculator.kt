@@ -34,6 +34,9 @@ object FanCalculator {
         val markers = zones.filterIsInstance<NoFireMarker>().map { marker ->
             proj.toEnu(marker.center) to marker.radiusM
         }
+        val lines = zones.filterIsInstance<NoFireLine>().map { line ->
+            line.vertices.map { proj.toEnu(it) } to line.bufferM
+        }
 
         val originVec = Vec2(0.0, 0.0)
 
@@ -70,6 +73,19 @@ object FanCalculator {
                     if (Geometry2D.distancePointToSegment(center, originVec, end) < radiusM) {
                         isBlocked = true
                         break
+                    }
+                }
+            }
+
+            if (!isBlocked) {
+                outerLines@ for ((lineVertices, bufferM) in lines) {
+                    for (j in 0 until lineVertices.size - 1) {
+                        val segStart = lineVertices[j]
+                        val segEnd = lineVertices[j + 1]
+                        if (Geometry2D.distanceSegmentToSegment(originVec, end, segStart, segEnd) <= bufferM) {
+                            isBlocked = true
+                            break@outerLines
+                        }
                     }
                 }
             }

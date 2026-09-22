@@ -84,4 +84,35 @@ object Geometry2D {
         if (result < 0.0) result += 360.0
         return result
     }
+
+    fun distanceSegmentToSegment(p1: Vec2, p2: Vec2, q1: Vec2, q2: Vec2): Double {
+        if (segmentsIntersect(p1, p2, q1, q2)) return 0.0
+        return minOf(
+            distancePointToSegment(p1, q1, q2),
+            distancePointToSegment(p2, q1, q2),
+            distancePointToSegment(q1, p1, p2),
+            distancePointToSegment(q2, p1, p2),
+        )
+    }
+
+    fun segmentBuffers(points: List<Vec2>, halfWidth: Double): List<List<Vec2>> {
+        if (halfWidth <= 0.0 || points.size < 2) return emptyList()
+        val result = mutableListOf<List<Vec2>>()
+        for (i in 0 until points.size - 1) {
+            val p1 = points[i]
+            val p2 = points[i + 1]
+            val d = (p2 - p1) * (1.0 / (p2 - p1).length)
+            val n = Vec2(-d.y, d.x) * halfWidth
+            result.add(
+                listOf(
+                    p1 + n,
+                    p2 + n,
+                    p2 - n,
+                    p1 - n,
+                    p1 + n,
+                ),
+            )
+        }
+        return result
+    }
 }

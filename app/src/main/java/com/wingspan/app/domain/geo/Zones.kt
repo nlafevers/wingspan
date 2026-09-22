@@ -18,6 +18,13 @@ data class NoFireMarker(
     val radiusM: Double,
 ) : NoFireZone
 
+data class NoFireLine(
+    override val id: Long,
+    override val name: String,
+    val vertices: List<LatLon>,
+    val bufferM: Double = 0.0,
+) : NoFireZone
+
 interface DeclinationProvider {
     fun declinationDeg(position: LatLon): Double
 }

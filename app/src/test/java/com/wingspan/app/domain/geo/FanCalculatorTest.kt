@@ -122,4 +122,59 @@ class FanCalculatorTest {
         assertEquals(origin, outline.first())
         assertEquals(origin, outline.last())
     }
+
+    private fun bearingInFan(bearing: Double, fan: Fan): Boolean {
+        if (fan.fullCircle) return true
+        return if (fan.leftTrueDeg <= fan.rightTrueDeg) {
+            bearing in fan.leftTrueDeg..fan.rightTrueDeg
+        } else {
+            bearing >= fan.leftTrueDeg || bearing <= fan.rightTrueDeg
+        }
+    }
+
+    @Test
+    fun noFireLineWithZeroBufferBlocksOnlyDirectCrossing() {
+        val line = NoFireLine(
+            id = 1,
+            name = "fence",
+            vertices = listOf(p(-50.0, 150.0), p(50.0, 150.0)),
+            bufferM = 0.0,
+        )
+
+        val result = FanCalculator.compute(origin, maxRangeM = 300.0, zones = listOf(line))
+
+        assertFalse(
+            "bearing 0 should be blocked (not in any clear fan)",
+            result.fans.any { bearingInFan(0.0, it) },
+        )
+        assertTrue(
+            "bearing 90 should not be blocked (in some clear fan)",
+            result.fans.any { bearingInFan(90.0, it) },
+        )
+    }
+
+    @Test
+    fun noFireLineWithBufferBlocksWiderSpanThanWithoutBuffer() {
+        val zeroBufferLine = NoFireLine(
+            id = 1,
+            name = "fence",
+            vertices = listOf(p(-50.0, 150.0), p(50.0, 150.0)),
+            bufferM = 0.0,
+        )
+        val bufferedLine = NoFireLine(
+            id = 2,
+            name = "fence-buffered",
+            vertices = listOf(p(-50.0, 150.0), p(50.0, 150.0)),
+            bufferM = 30.0,
+        )
+
+        val zeroResult = FanCalculator.compute(origin, maxRangeM = 300.0, zones = listOf(zeroBufferLine))
+        val bufferedResult = FanCalculator.compute(origin, maxRangeM = 300.0, zones = listOf(bufferedLine))
+
+        assertTrue(
+            "buffered blockedBearings ${bufferedResult.blockedBearings} should exceed " +
+                "zero-buffer blockedBearings ${zeroResult.blockedBearings}",
+            bufferedResult.blockedBearings > zeroResult.blockedBearings,
+        )
+    }
 }

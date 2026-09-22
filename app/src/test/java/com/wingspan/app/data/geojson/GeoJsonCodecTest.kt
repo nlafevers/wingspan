@@ -1,6 +1,7 @@
 package com.wingspan.app.data.geojson
 
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import org.junit.Assert.assertEquals
@@ -114,6 +115,60 @@ class GeoJsonCodecTest {
         assertEquals(25.0, marker.radiusM, epsilon)
         assertEquals(38.5, marker.center.lat, epsilon)
         assertEquals(-121.9, marker.center.lon, epsilon)
+    }
+
+    @Test
+    fun `round trip preserves line`() {
+        val line = NoFireLine(
+            id = 3,
+            name = "Fence Line",
+            vertices = listOf(
+                LatLon(lat = 37.1, lon = -122.1),
+                LatLon(lat = 37.2, lon = -122.2),
+                LatLon(lat = 37.3, lon = -122.05),
+            ),
+            bufferM = 10.0,
+        )
+
+        val encoded = GeoJsonCodec.encode(listOf(line))
+        val decoded = GeoJsonCodec.decode(encoded)
+
+        assertEquals(1, decoded.size)
+        val decodedLine = decoded[0] as NoFireLine
+        assertEquals("Fence Line", decodedLine.name)
+        assertEquals(0L, decodedLine.id)
+        assertEquals(line.vertices.size, decodedLine.vertices.size)
+        line.vertices.zip(decodedLine.vertices).forEach { (expected, actual) ->
+            assertEquals(expected.lat, actual.lat, epsilon)
+            assertEquals(expected.lon, actual.lon, epsilon)
+        }
+        assertEquals(line.bufferM, decodedLine.bufferM, epsilon)
+    }
+
+    @Test
+    fun `decode line string without buffer_m defaults to zero`() {
+        val geoJson = """
+            {
+              "type": "Feature",
+              "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                  [-122.1, 37.1],
+                  [-122.2, 37.2]
+                ]
+              },
+              "properties": {
+                "name": "No Buffer Line"
+              }
+            }
+        """.trimIndent()
+
+        val decoded = GeoJsonCodec.decode(geoJson)
+
+        assertEquals(1, decoded.size)
+        val line = decoded[0] as NoFireLine
+        assertEquals("No Buffer Line", line.name)
+        assertEquals(0.0, line.bufferM, epsilon)
     }
 
     @Test

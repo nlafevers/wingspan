@@ -3,6 +3,7 @@ package com.wingspan.app.data
 import com.wingspan.app.data.db.ZoneDao
 import com.wingspan.app.data.db.ZoneEntity
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
@@ -42,6 +43,19 @@ class ZoneRepository(private val dao: ZoneDao) {
             ),
         )
 
+    suspend fun addLine(name: String, vertices: List<LatLon>, bufferM: Double): Long =
+        dao.insert(
+            ZoneEntity(
+                name = name,
+                type = ZoneEntity.TYPE_LINE,
+                verticesJson = encodeVertices(vertices),
+                lat = null,
+                lon = null,
+                radiusM = bufferM,
+                createdAt = System.currentTimeMillis(),
+            ),
+        )
+
     suspend fun updatePolygon(id: Long, name: String, vertices: List<LatLon>) {
         val existing = dao.getById(id) ?: return
         dao.update(
@@ -66,6 +80,20 @@ class ZoneRepository(private val dao: ZoneDao) {
                 lat = center.lat,
                 lon = center.lon,
                 radiusM = radiusM,
+            ),
+        )
+    }
+
+    suspend fun updateLine(id: Long, name: String, vertices: List<LatLon>, bufferM: Double) {
+        val existing = dao.getById(id) ?: return
+        dao.update(
+            existing.copy(
+                name = name,
+                type = ZoneEntity.TYPE_LINE,
+                verticesJson = encodeVertices(vertices),
+                lat = null,
+                lon = null,
+                radiusM = bufferM,
             ),
         )
     }
@@ -109,6 +137,12 @@ class ZoneRepository(private val dao: ZoneDao) {
             center = LatLon(lat = entity.lat ?: 0.0, lon = entity.lon ?: 0.0),
             radiusM = entity.radiusM ?: 0.0,
         )
+        ZoneEntity.TYPE_LINE -> NoFireLine(
+            id = entity.id,
+            name = entity.name,
+            vertices = decodeVertices(entity.verticesJson),
+            bufferM = entity.radiusM ?: 0.0,
+        )
         else -> error("Unknown zone type: ${entity.type}")
     }
 
@@ -131,6 +165,16 @@ class ZoneRepository(private val dao: ZoneDao) {
             lat = zone.center.lat,
             lon = zone.center.lon,
             radiusM = zone.radiusM,
+            createdAt = createdAt,
+        )
+        is NoFireLine -> ZoneEntity(
+            id = zone.id,
+            name = zone.name,
+            type = ZoneEntity.TYPE_LINE,
+            verticesJson = encodeVertices(zone.vertices),
+            lat = null,
+            lon = null,
+            radiusM = zone.bufferM,
             createdAt = createdAt,
         )
     }

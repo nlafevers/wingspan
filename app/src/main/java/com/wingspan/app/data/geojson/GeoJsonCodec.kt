@@ -1,6 +1,7 @@
 package com.wingspan.app.data.geojson
 
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
@@ -28,8 +29,10 @@ import kotlinx.serialization.json.put
 object GeoJsonCodec {
 
     private const val DEFAULT_MARKER_RADIUS_M = 25.0
+    private const val DEFAULT_LINE_BUFFER_M = 0.0
     private const val DEFAULT_POLYGON_NAME = "Imported polygon"
     private const val DEFAULT_MARKER_NAME = "Imported marker"
+    private const val DEFAULT_LINE_NAME = "Imported line"
 
     private val prettyJson = Json { prettyPrint = true }
 
@@ -79,6 +82,29 @@ object GeoJsonCodec {
                     put("name", zone.name)
                     put("type", "no_fire_marker")
                     put("radius_m", zone.radiusM)
+                },
+            )
+        }
+        is NoFireLine -> buildJsonObject {
+            put("type", "Feature")
+            put(
+                "geometry",
+                buildJsonObject {
+                    put("type", "LineString")
+                    put(
+                        "coordinates",
+                        buildJsonArray {
+                            zone.vertices.forEach { vertex -> add(encodePosition(vertex)) }
+                        },
+                    )
+                },
+            )
+            put(
+                "properties",
+                buildJsonObject {
+                    put("name", zone.name)
+                    put("type", "no_fire_line")
+                    put("buffer_m", zone.bufferM)
                 },
             )
         }
@@ -136,6 +162,32 @@ object GeoJsonCodec {
                         id = 0,
                         name = name ?: DEFAULT_POLYGON_NAME,
                         vertices = decodeRing(ring),
+                    )
+                }
+            }
+            "LineString" -> {
+                val coordinates = geometry["coordinates"]?.jsonArray ?: return emptyList()
+                val bufferM = properties?.get("buffer_m")?.jsonPrimitive?.doubleOrNull
+                    ?: DEFAULT_LINE_BUFFER_M
+                listOf(
+                    NoFireLine(
+                        id = 0,
+                        name = name ?: DEFAULT_LINE_NAME,
+                        vertices = coordinates.map { decodePosition(it) },
+                        bufferM = bufferM,
+                    ),
+                )
+            }
+            "MultiLineString" -> {
+                val lines = geometry["coordinates"]?.jsonArray ?: return emptyList()
+                val bufferM = properties?.get("buffer_m")?.jsonPrimitive?.doubleOrNull
+                    ?: DEFAULT_LINE_BUFFER_M
+                lines.map { lineElement ->
+                    NoFireLine(
+                        id = 0,
+                        name = name ?: DEFAULT_LINE_NAME,
+                        vertices = lineElement.jsonArray.map { decodePosition(it) },
+                        bufferM = bufferM,
                     )
                 }
             }

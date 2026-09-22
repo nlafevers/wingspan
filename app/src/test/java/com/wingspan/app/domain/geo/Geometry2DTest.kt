@@ -109,4 +109,65 @@ class Geometry2DTest {
 
         assertEquals(111.2, v.y, 0.5)
     }
+
+    @Test
+    fun distanceSegmentToSegmentCrossingSegmentsIsZero() {
+        val p1 = Vec2(0.0, 0.0)
+        val p2 = Vec2(10.0, 10.0)
+        val q1 = Vec2(0.0, 10.0)
+        val q2 = Vec2(10.0, 0.0)
+
+        assertEquals(0.0, Geometry2D.distanceSegmentToSegment(p1, p2, q1, q2), 1e-9)
+    }
+
+    @Test
+    fun distanceSegmentToSegmentParallelSegmentsFiveApart() {
+        val p1 = Vec2(0.0, 0.0)
+        val p2 = Vec2(10.0, 0.0)
+        val q1 = Vec2(0.0, 5.0)
+        val q2 = Vec2(10.0, 5.0)
+
+        assertEquals(5.0, Geometry2D.distanceSegmentToSegment(p1, p2, q1, q2), 1e-9)
+    }
+
+    @Test
+    fun distanceSegmentToSegmentClosestApproachIsEndpointToSegment() {
+        val p1 = Vec2(0.0, 0.0)
+        val p2 = Vec2(10.0, 0.0)
+        val q1 = Vec2(20.0, 0.0)
+        val q2 = Vec2(20.0, 10.0)
+
+        val expected = Geometry2D.distancePointToSegment(p2, q1, q2)
+        assertEquals(expected, Geometry2D.distanceSegmentToSegment(p1, p2, q1, q2), 1e-9)
+    }
+
+    @Test
+    fun segmentBuffersProducesExpectedRectangle() {
+        val points = listOf(Vec2(0.0, 0.0), Vec2(10.0, 0.0))
+
+        val rectangles = Geometry2D.segmentBuffers(points, halfWidth = 2.0)
+
+        assertEquals(1, rectangles.size)
+        val corners = rectangles[0].dropLast(1)
+        val expected = setOf(
+            Vec2(0.0, 2.0),
+            Vec2(10.0, 2.0),
+            Vec2(10.0, -2.0),
+            Vec2(0.0, -2.0),
+        )
+        assertEquals(4, corners.size)
+        for (corner in corners) {
+            assertTrue(
+                "corner $corner should match one of $expected",
+                expected.any { kotlin.math.abs(it.x - corner.x) < 1e-9 && kotlin.math.abs(it.y - corner.y) < 1e-9 },
+            )
+        }
+    }
+
+    @Test
+    fun segmentBuffersWithZeroHalfWidthIsEmpty() {
+        val points = listOf(Vec2(0.0, 0.0), Vec2(10.0, 0.0))
+
+        assertTrue(Geometry2D.segmentBuffers(points, halfWidth = 0.0).isEmpty())
+    }
 }
