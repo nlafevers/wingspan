@@ -446,7 +446,7 @@ Goal: pure-Kotlin geometry that projects lat/lon to local meters, tests rays aga
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew testDebugUnitTest`
   - **Done when:** `Geometry2DTest` passes.
 
-- [ ] **WS-2.2** Implement the fan calculator, sector outlines, bearing conversion, and tile math
+- [x] **WS-2.2** Implement the fan calculator, sector outlines, bearing conversion, and tile math (Commit: 6798522)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/main/java/com/wingspan/app/domain/geo/EnuProjection.kt, app/src/main/java/com/wingspan/app/domain/geo/LatLon.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/domain/geo/FanCalculator.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt, app/src/main/java/com/wingspan/app/domain/geo/TileMath.kt, app/src/test/java/com/wingspan/app/domain/geo/FanCalculatorTest.kt
