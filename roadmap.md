@@ -653,7 +653,7 @@ Goal: a MapLibre map with switchable USGS/Esri basemaps, live GPS or manual shoo
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds; `Geometry2DTest`, `FanCalculatorTest`, and `GeoJsonCodecTest` all pass with the new cases; no `android.*` imports introduced in the `domain/geo` files.
 
-- [ ] **WS-4.5** Render persisted no-fire zones on the map
+- [x] **WS-4.5** Render persisted no-fire zones on the map (Commit: 890d847)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
