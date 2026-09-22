@@ -7,10 +7,12 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wingspan.app.AppContainer
 import com.wingspan.app.data.SettingsRepository
+import com.wingspan.app.data.ZoneRepository
 import com.wingspan.app.data.location.LocationFix
 import com.wingspan.app.data.location.LocationProvider
 import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.domain.geo.NoFireZone
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,11 +29,15 @@ data class ShooterPosition(val position: LatLon, val source: PositionSource, val
 class MapViewModel(
     private val settingsRepository: SettingsRepository,
     private val locationProvider: LocationProvider,
+    private val zoneRepository: ZoneRepository,
 ) : ViewModel() {
 
     val basemap: StateFlow<Basemap> = settingsRepository.basemapKey
         .map(Basemap::fromKey)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Basemap.USGS_TOPO)
+
+    val zones: StateFlow<List<NoFireZone>> = zoneRepository.zones
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setBasemap(b: Basemap) {
         viewModelScope.launch { settingsRepository.setBasemapKey(b.key) }
@@ -93,7 +99,9 @@ class MapViewModel(
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { MapViewModel(container.settingsRepository, container.locationProvider) }
+            initializer {
+                MapViewModel(container.settingsRepository, container.locationProvider, container.zoneRepository)
+            }
         }
     }
 }

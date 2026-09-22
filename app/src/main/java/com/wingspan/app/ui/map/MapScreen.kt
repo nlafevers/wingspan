@@ -42,6 +42,7 @@ fun MapScreen(
     val basemap by viewModel.basemap.collectAsStateWithLifecycle()
     val shooter by viewModel.shooter.collectAsStateWithLifecycle()
     val manualMode by viewModel.manualMode.collectAsStateWithLifecycle()
+    val zones by viewModel.zones.collectAsStateWithLifecycle()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -57,6 +58,7 @@ fun MapScreen(
 
     LaunchedEffect(basemap) { controller.setBasemap(basemap) }
     LaunchedEffect(shooter) { controller.setShooter(shooter) }
+    LaunchedEffect(zones) { controller.setZones(zones) }
     LaunchedEffect(Unit) {
         viewModel.cameraRequests.collect { controller.animateCamera(it, zoom = maxOf(controller.currentZoom(), 15.0)) }
     }

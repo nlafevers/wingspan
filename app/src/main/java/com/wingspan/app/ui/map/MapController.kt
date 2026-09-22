@@ -2,8 +2,15 @@ package com.wingspan.app.ui.map
 
 import android.content.Context
 import com.wingspan.app.data.map.Basemap
+import com.wingspan.app.domain.geo.EnuProjection
+import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.domain.geo.NoFireLine
+import com.wingspan.app.domain.geo.NoFireMarker
+import com.wingspan.app.domain.geo.NoFirePolygon
+import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.domain.geo.Sector
+import com.wingspan.app.domain.geo.Vec2
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -12,15 +19,19 @@ import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
 import org.maplibre.android.style.layers.PropertyFactory.fillColor
 import org.maplibre.android.style.layers.PropertyFactory.fillOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
 
@@ -33,6 +44,7 @@ class MapController(private val context: Context) {
     private var style: Style? = null
     private var basemap: Basemap? = null
     private var shooter: ShooterPosition? = null
+    private var zones: List<NoFireZone> = emptyList()
     private var onLongPress: ((LatLon) -> Unit)? = null
 
     fun attach(mapView: MapView, map: MapLibreMap) {
@@ -79,17 +91,19 @@ class MapController(private val context: Context) {
         // 4.  zones-marker-circles-fill
         // 5.  zones-marker-circles-outline
         // 6.  zones-marker-points
-        // 7.  fans-fill
-        // 8.  fans-outline
-        // 9.  fans-effective
-        // 10. fans-selected
-        // 11. snapshot-fans-fill
-        // 12. snapshot-fans-outline
-        // 13. position-dot
-        // 14. editor-fill
-        // 15. editor-outline
-        // 16. editor-midpoints
-        // 17. editor-handles
+        // 7.  zones-lines-buffer-fill
+        // 8.  zones-lines-outline
+        // 9.  fans-fill
+        // 10. fans-outline
+        // 11. fans-effective
+        // 12. fans-selected
+        // 13. snapshot-fans-fill
+        // 14. snapshot-fans-outline
+        // 15. position-dot
+        // 16. editor-fill
+        // 17. editor-outline
+        // 18. editor-midpoints
+        // 19. editor-handles
 
         style.addSource(GeoJsonSource("position-accuracy"))
         style.addLayer(
@@ -97,7 +111,46 @@ class MapController(private val context: Context) {
                 .withProperties(fillColor("#1E88E5"), fillOpacity(0.15f))
         )
 
-        // Steps 2-12 (zones/fans/snapshot-fans) slot in here in future work, above.
+        style.addSource(GeoJsonSource("zones-polygons"))
+        style.addSource(GeoJsonSource("zones-marker-circles"))
+        style.addSource(GeoJsonSource("zones-marker-points"))
+        style.addSource(GeoJsonSource("zones-lines"))
+        style.addSource(GeoJsonSource("zones-lines-buffer"))
+        style.addLayer(
+            FillLayer("zones-polygons-fill", "zones-polygons")
+                .withProperties(fillColor("#D32F2F"), fillOpacity(0.30f))
+        )
+        style.addLayer(
+            LineLayer("zones-polygons-outline", "zones-polygons")
+                .withProperties(lineColor("#B71C1C"), lineWidth(2f))
+        )
+        style.addLayer(
+            FillLayer("zones-marker-circles-fill", "zones-marker-circles")
+                .withProperties(fillColor("#D32F2F"), fillOpacity(0.25f))
+        )
+        style.addLayer(
+            LineLayer("zones-marker-circles-outline", "zones-marker-circles")
+                .withProperties(lineColor("#B71C1C"), lineWidth(1.5f))
+        )
+        style.addLayer(
+            CircleLayer("zones-marker-points", "zones-marker-points")
+                .withProperties(
+                    circleRadius(6f),
+                    circleColor("#B71C1C"),
+                    circleStrokeColor("#FFFFFF"),
+                    circleStrokeWidth(1.5f),
+                )
+        )
+        style.addLayer(
+            FillLayer("zones-lines-buffer-fill", "zones-lines-buffer")
+                .withProperties(fillColor("#D32F2F"), fillOpacity(0.20f))
+        )
+        style.addLayer(
+            LineLayer("zones-lines-outline", "zones-lines")
+                .withProperties(lineColor("#B71C1C"), lineWidth(3f))
+        )
+
+        // Steps 9-14 (fans/snapshot-fans) slot in here in future work, above.
 
         style.addSource(GeoJsonSource("position"))
         style.addLayer(
@@ -111,6 +164,7 @@ class MapController(private val context: Context) {
         )
 
         applyShooter()
+        applyZones()
     }
 
     fun moveCamera(target: LatLon, zoom: Double? = null) {
@@ -162,6 +216,81 @@ class MapController(private val context: Context) {
             FeatureCollection.fromFeatures(emptyArray())
         }
         style.getSourceAs<GeoJsonSource>("position-accuracy")?.setGeoJson(accuracyCollection)
+    }
+
+    fun setZones(zones: List<NoFireZone>) {
+        this.zones = zones
+        applyZones()
+    }
+
+    private fun applyZones() {
+        val style = style ?: return
+
+        val polygonFeatures = mutableListOf<Feature>()
+        val markerCircleFeatures = mutableListOf<Feature>()
+        val markerPointFeatures = mutableListOf<Feature>()
+        val lineFeatures = mutableListOf<Feature>()
+        val lineBufferFeatures = mutableListOf<Feature>()
+
+        for (zone in zones) {
+            when (zone) {
+                is NoFirePolygon -> {
+                    val ring = zone.vertices.map { Point.fromLngLat(it.lon, it.lat) }
+                    val closedRing = if (ring.isNotEmpty() && ring.first() != ring.last()) ring + ring.first() else ring
+                    val feature = Feature.fromGeometry(Polygon.fromLngLats(listOf(closedRing)))
+                    feature.addNumberProperty("zoneId", zone.id)
+                    feature.addStringProperty("name", zone.name)
+                    polygonFeatures.add(feature)
+                }
+                is NoFireMarker -> {
+                    val ring = Sector.circleOutline(zone.center, zone.radiusM).map { Point.fromLngLat(it.lon, it.lat) }
+                    val closedRing = if (ring.isNotEmpty() && ring.first() != ring.last()) ring + ring.first() else ring
+                    val circleFeature = Feature.fromGeometry(Polygon.fromLngLats(listOf(closedRing)))
+                    circleFeature.addNumberProperty("zoneId", zone.id)
+                    circleFeature.addStringProperty("name", zone.name)
+                    markerCircleFeatures.add(circleFeature)
+
+                    val pointFeature = Feature.fromGeometry(Point.fromLngLat(zone.center.lon, zone.center.lat))
+                    pointFeature.addNumberProperty("zoneId", zone.id)
+                    pointFeature.addStringProperty("name", zone.name)
+                    markerPointFeatures.add(pointFeature)
+                }
+                is NoFireLine -> {
+                    val linePoints = zone.vertices.map { Point.fromLngLat(it.lon, it.lat) }
+                    val lineFeature = Feature.fromGeometry(LineString.fromLngLats(linePoints))
+                    lineFeature.addNumberProperty("zoneId", zone.id)
+                    lineFeature.addStringProperty("name", zone.name)
+                    lineFeatures.add(lineFeature)
+
+                    if (zone.bufferM > 0.0 && zone.vertices.isNotEmpty()) {
+                        val proj = EnuProjection(zone.vertices.first())
+                        val vecs = zone.vertices.map { proj.toEnu(it) }
+                        val rectangles = Geometry2D.segmentBuffers(vecs, zone.bufferM)
+                        for (rectangle in rectangles) {
+                            val rectRing = rectangle.map { corner ->
+                                val latLon = proj.fromEnu(corner)
+                                Point.fromLngLat(latLon.lon, latLon.lat)
+                            }
+                            val bufferFeature = Feature.fromGeometry(Polygon.fromLngLats(listOf(rectRing)))
+                            bufferFeature.addNumberProperty("zoneId", zone.id)
+                            bufferFeature.addStringProperty("name", zone.name)
+                            lineBufferFeatures.add(bufferFeature)
+                        }
+                    }
+                }
+            }
+        }
+
+        style.getSourceAs<GeoJsonSource>("zones-polygons")
+            ?.setGeoJson(FeatureCollection.fromFeatures(polygonFeatures))
+        style.getSourceAs<GeoJsonSource>("zones-marker-circles")
+            ?.setGeoJson(FeatureCollection.fromFeatures(markerCircleFeatures))
+        style.getSourceAs<GeoJsonSource>("zones-marker-points")
+            ?.setGeoJson(FeatureCollection.fromFeatures(markerPointFeatures))
+        style.getSourceAs<GeoJsonSource>("zones-lines")
+            ?.setGeoJson(FeatureCollection.fromFeatures(lineFeatures))
+        style.getSourceAs<GeoJsonSource>("zones-lines-buffer")
+            ?.setGeoJson(FeatureCollection.fromFeatures(lineBufferFeatures))
     }
 
     fun setOnLongPress(listener: (LatLon) -> Unit) {
