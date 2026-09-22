@@ -401,7 +401,7 @@ Goal: a pure-Kotlin, unit-tested ballistics model that turns load settings into 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew testDebugUnitTest`
   - **Done when:** `TrajectoryTest` passes.
 
-- [ ] **WS-1.3** Implement `RangeCalculator` and validate against Journee's rule
+- [x] **WS-1.3** Implement `RangeCalculator` and validate against Journee's rule (Commit: 703d6db)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/Trajectory.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Pellet.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Choke.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/BallisticInput.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeResult.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeCalculator.kt, app/src/test/java/com/wingspan/app/domain/ballistics/RangeCalculatorTest.kt
