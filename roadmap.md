@@ -546,7 +546,7 @@ Acceptance criteria for Phase 3:
 
 Goal: a MapLibre map with switchable USGS/Esri basemaps, live GPS or manual shooter position, and persisted zones drawn as overlays.
 
-- [ ] **WS-4.1** Add basemap style assets and the `Basemap` enum
+- [x] **WS-4.1** Add basemap style assets and the `Basemap` enum (Commit: a8d01e4)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/SettingsRepository.kt
   - **Edit:** app/src/main/assets/styles/usgs_topo.json, app/src/main/assets/styles/usgs_imagery.json, app/src/main/assets/styles/esri_imagery.json, app/src/main/java/com/wingspan/app/data/map/Basemap.kt
