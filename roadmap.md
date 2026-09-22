@@ -601,7 +601,7 @@ Goal: a MapLibre map with switchable USGS/Esri basemaps, live GPS or manual shoo
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: the map renders USGS Topo; the chips switch basemaps and the choice survives an app restart.
 
-- [ ] **WS-4.3** Add live GPS position, manual position mode, and camera controls
+- [x] **WS-4.3** Add live GPS position, manual position mode, and camera controls (Commit: 6e5dc0e)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt, app/src/main/java/com/wingspan/app/AppContainer.kt
   - **Edit:** app/src/main/java/com/wingspan/app/data/location/LocationProvider.kt, app/src/main/java/com/wingspan/app/AppContainer.kt, app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
