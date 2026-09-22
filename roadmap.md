@@ -578,7 +578,7 @@ Goal: a MapLibre map with switchable USGS/Esri basemaps, live GPS or manual shoo
   - **Verify:** `cd /home/nathan/wingspan && for f in app/src/main/assets/styles/*.json; do python3 -m json.tool "$f" > /dev/null && echo "ok $f"; done && ./gradlew assembleDebug`
   - **Done when:** all three JSON files parse; build succeeds.
 
-- [ ] **WS-4.2** Host MapLibre in Compose with basemap switching
+- [x] **WS-4.2** Host MapLibre in Compose with basemap switching (Commit: b62effa)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/map/Basemap.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/main/java/com/wingspan/app/WingspanApplication.kt, app/src/main/java/com/wingspan/app/MainActivity.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapLibreView.kt, app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/MainActivity.kt
