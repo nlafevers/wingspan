@@ -487,7 +487,7 @@ Acceptance criteria for Phase 2:
 
 Goal: Room persistence for zones and snapshots, DataStore-backed settings, GeoJSON interchange, and the app-wide `AppContainer`.
 
-- [ ] **WS-3.1** Add Room entities, DAOs, and the database
+- [x] **WS-3.1** Add Room entities, DAOs, and the database (Commit: 4a54788)
   - **Repos:** wingspan
   - **Read:** app/build.gradle.kts
   - **Edit:** app/src/main/java/com/wingspan/app/data/db/ZoneEntity.kt, app/src/main/java/com/wingspan/app/data/db/ZoneDao.kt, app/src/main/java/com/wingspan/app/data/db/SnapshotEntity.kt, app/src/main/java/com/wingspan/app/data/db/SnapshotDao.kt, app/src/main/java/com/wingspan/app/data/db/AppDatabase.kt
