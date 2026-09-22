@@ -500,7 +500,7 @@ Goal: Room persistence for zones and snapshots, DataStore-backed settings, GeoJS
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds (KSP generates `AppDatabase_Impl` without errors).
 
-- [ ] **WS-3.2** Add `LoadSettings`, `SettingsRepository` (DataStore), and `ZoneRepository`
+- [x] **WS-3.2** Add `LoadSettings`, `SettingsRepository` (DataStore), and `ZoneRepository` (Commit: 7fa3003)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/BallisticInput.kt, app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/data/db/ZoneDao.kt, app/src/main/java/com/wingspan/app/data/db/ZoneEntity.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/test/java/com/wingspan/app/domain/ballistics/LoadSettingsTest.kt
