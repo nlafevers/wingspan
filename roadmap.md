@@ -387,7 +387,7 @@ Goal: a pure-Kotlin, unit-tested ballistics model that turns load settings into 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew testDebugUnitTest`
   - **Done when:** `TablesTest` passes; no `android.*` imports in `domain/ballistics`.
 
-- [ ] **WS-1.2** Implement the atmosphere/drag model and the trajectory integrator
+- [x] **WS-1.2** Implement the atmosphere/drag model and the trajectory integrator (Commit: 3b2e279)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/DragModel.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Pellet.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Trajectory.kt, app/src/test/java/com/wingspan/app/domain/ballistics/TrajectoryTest.kt
