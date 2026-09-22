@@ -512,7 +512,7 @@ Goal: Room persistence for zones and snapshots, DataStore-backed settings, GeoJS
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build and `LoadSettingsTest` pass.
 
-- [ ] **WS-3.3** Implement the GeoJSON codec for zones
+- [x] **WS-3.3** Implement the GeoJSON codec for zones (Commit: 00b6dac)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/domain/geo/LatLon.kt
   - **Edit:** app/src/main/java/com/wingspan/app/data/geojson/GeoJsonCodec.kt, app/src/test/java/com/wingspan/app/data/geojson/GeoJsonCodecTest.kt
