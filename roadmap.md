@@ -787,7 +787,7 @@ Goal: a wind speed setting produces a safety buffer that lengthens the fans and 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build passes, `FanCalculatorTest` passes, and every pre-existing assertion in that file still holds with no change to its call sites.
 
-- [ ] **WS-6.4** Add display formatters, the settings view model, and the settings screen
+- [x] **WS-6.4** Add display formatters, the settings view model, and the settings screen (Commit: 5d94e42)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeCalculator.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeResult.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/Formatters.kt, app/src/test/java/com/wingspan/app/ui/FormattersTest.kt, app/src/main/java/com/wingspan/app/ui/settings/SettingsViewModel.kt, app/src/main/java/com/wingspan/app/ui/settings/SettingsScreen.kt
