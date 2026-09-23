@@ -746,7 +746,7 @@ Acceptance criteria for Phase 5:
 
 Goal: a wind speed setting produces a safety buffer that lengthens the fans and widens the zones, a settings screen drives the ballistics model, and the map shows range fans around the shooter with tap-to-read magnetic bearings.
 
-- [ ] **WS-6.1** Add a wind-aware trajectory and the wind-buffer range calculation
+- [x] **WS-6.1** Add a wind-aware trajectory and the wind-buffer range calculation (Commit: ef9182c)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/Trajectory.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeCalculator.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeResult.kt, app/src/main/java/com/wingspan/app/domain/ballistics/BallisticInput.kt, app/src/main/java/com/wingspan/app/domain/ballistics/DragModel.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/Trajectory.kt, app/src/main/java/com/wingspan/app/domain/ballistics/BallisticInput.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeResult.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeCalculator.kt, app/src/test/java/com/wingspan/app/domain/ballistics/TrajectoryTest.kt, app/src/test/java/com/wingspan/app/domain/ballistics/RangeCalculatorTest.kt
