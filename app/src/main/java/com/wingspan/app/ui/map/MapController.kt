@@ -81,6 +81,7 @@ class MapController(private val context: Context) {
     private var moved: Boolean = false
     private var pendingCameraTarget: LatLon? = null
     private var pendingCameraZoom: Double? = null
+    private var hasCenteredOnShooter = false
 
     interface HandleDragListener {
         fun onHandleMoved(index: Int, p: LatLon)
@@ -337,6 +338,15 @@ class MapController(private val context: Context) {
     fun setShooter(s: ShooterPosition?) {
         shooter = s
         applyShooter()
+        // Recenter on this controller's first known shooter position, whether that's a brand
+        // new GPS fix (cold start) or a position the ViewModel already had (e.g. returning from
+        // Settings recreates this controller/native map from scratch, so it has no memory of
+        // where the camera used to be - but the Compose-collected shooter state reflects the
+        // ViewModel's current value immediately regardless of how the map view itself restarted).
+        if (!hasCenteredOnShooter && s != null) {
+            hasCenteredOnShooter = true
+            animateCamera(s.position, zoom = maxOf(currentZoom(), 15.0))
+        }
     }
 
     private fun applyShooter() {
