@@ -810,7 +810,7 @@ Goal: a wind speed setting produces a safety buffer that lengthens the fans and 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: menu → Settings opens the settings screen; changing shot size updates the computed ranges card; back returns to the map with state intact.
 
-- [ ] **WS-6.6** Compute range fans from position, zones, and settings
+- [x] **WS-6.6** Compute range fans from position, zones, and settings (Commit: 33de806)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/domain/geo/FanCalculator.kt, app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeCalculator.kt, app/src/main/java/com/wingspan/app/AppContainer.kt
   - **Edit:** app/src/main/java/com/wingspan/app/data/AndroidDeclination.kt, app/src/main/java/com/wingspan/app/AppContainer.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt
