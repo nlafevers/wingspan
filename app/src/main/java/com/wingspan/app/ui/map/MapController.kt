@@ -30,6 +30,7 @@ import org.maplibre.android.style.layers.PropertyFactory.fillColor
 import org.maplibre.android.style.layers.PropertyFactory.fillOpacity
 import org.maplibre.android.style.layers.PropertyFactory.lineCap
 import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineDasharray
 import org.maplibre.android.style.layers.PropertyFactory.lineJoin
 import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
 import org.maplibre.android.style.layers.PropertyFactory.lineWidth
@@ -43,9 +44,10 @@ import kotlin.math.cos
 import kotlin.math.pow
 
 /**
- * The result of a tap on the map: where it landed, and the zone (if any) hit there.
+ * The result of a tap on the map: where it landed, the zone (if any) hit there, and the fan
+ * (if any) hit there when no zone was hit.
  */
-data class TapHit(val position: LatLon, val zoneId: Long?)
+data class TapHit(val position: LatLon, val zoneId: Long?, val fanIndex: Int?)
 
 /**
  * The only place in the app that talks to MapLibre directly.
@@ -63,6 +65,9 @@ class MapController(private val context: Context) {
     private var basemap: Basemap? = null
     private var shooter: ShooterPosition? = null
     private var zones: List<NoFireZone> = emptyList()
+    private var fanState: FanUiState? = null
+    private var selectedFanState: FanUiState? = null
+    private var selectedFanIndexValue: Int? = null
     private var onLongPress: ((LatLon) -> Unit)? = null
     private var onTap: ((TapHit) -> Unit)? = null
     private var handleDragListener: HandleDragListener? = null
@@ -93,7 +98,7 @@ class MapController(private val context: Context) {
             val position = LatLon(it.latitude, it.longitude)
             val screenPoint = map.projection.toScreenLocation(it)
             val hitBox = RectF(screenPoint.x - 12f, screenPoint.y - 12f, screenPoint.x + 12f, screenPoint.y + 12f)
-            val features = map.queryRenderedFeatures(
+            val zoneFeatures = map.queryRenderedFeatures(
                 hitBox,
                 "zones-marker-points",
                 "zones-marker-circles-fill",
@@ -101,8 +106,14 @@ class MapController(private val context: Context) {
                 "zones-lines-outline",
                 "zones-lines-buffer-stroke",
             )
-            val zoneId = features.firstOrNull()?.getNumberProperty("zoneId")?.toLong()
-            onTap?.invoke(TapHit(position, zoneId))
+            val zoneId = zoneFeatures.firstOrNull()?.getNumberProperty("zoneId")?.toLong()
+            val fanIndex = if (zoneId == null) {
+                map.queryRenderedFeatures(hitBox, "fans-fill").firstOrNull()
+                    ?.getNumberProperty("fanIndex")?.toInt()
+            } else {
+                null
+            }
+            onTap?.invoke(TapHit(position, zoneId, fanIndex))
             true
         }
         mapView.setOnTouchListener { _, ev -> handleTouch(ev) }
@@ -207,7 +218,27 @@ class MapController(private val context: Context) {
                 .withProperties(lineColor("#B71C1C"), lineWidth(3f))
         )
 
-        // Steps 9-14 (fans/snapshot-fans) slot in here in future work, above.
+        style.addSource(GeoJsonSource("fans"))
+        style.addSource(GeoJsonSource("fans-effective"))
+        style.addSource(GeoJsonSource("fans-selected"))
+        style.addLayer(
+            FillLayer("fans-fill", "fans")
+                .withProperties(fillColor("#43A047"), fillOpacity(0.25f))
+        )
+        style.addLayer(
+            LineLayer("fans-outline", "fans")
+                .withProperties(lineColor("#2E7D32"), lineWidth(2f))
+        )
+        style.addLayer(
+            LineLayer("fans-effective", "fans-effective")
+                .withProperties(lineColor("#2E7D32"), lineWidth(1.5f), lineDasharray(arrayOf(2f, 2f)))
+        )
+        style.addLayer(
+            LineLayer("fans-selected", "fans-selected")
+                .withProperties(lineColor("#FFD600"), lineWidth(4f))
+        )
+
+        // Steps 12-13 (snapshot-fans) slot in here in future work, above.
 
         style.addSource(GeoJsonSource("position"))
         style.addLayer(
@@ -263,6 +294,8 @@ class MapController(private val context: Context) {
 
         applyShooter()
         applyZones()
+        applyFans()
+        applySelectedFan()
         applyEditorRender()
     }
 
@@ -390,6 +423,75 @@ class MapController(private val context: Context) {
             ?.setGeoJson(FeatureCollection.fromFeatures(markerPointFeatures))
         style.getSourceAs<GeoJsonSource>("zones-lines")
             ?.setGeoJson(FeatureCollection.fromFeatures(lineFeatures))
+    }
+
+    fun setFans(state: FanUiState?) {
+        fanState = state
+        applyFans()
+    }
+
+    private fun applyFans() {
+        val style = style ?: return
+        val state = fanState
+
+        val fillFeatures = mutableListOf<Feature>()
+        val effectiveFeatures = mutableListOf<Feature>()
+
+        if (state != null && !state.insideZone) {
+            for (fanView in state.fans) {
+                val fan = fanView.fan
+                val outline = Sector.sectorOutline(
+                    state.origin, fan.leftTrueDeg, fan.rightTrueDeg, state.range.fanRangeM
+                ).map { Point.fromLngLat(it.lon, it.lat) }
+                val closedOutline = if (outline.isNotEmpty() && outline.first() != outline.last()) {
+                    outline + outline.first()
+                } else {
+                    outline
+                }
+                val fillFeature = Feature.fromGeometry(Polygon.fromLngLats(listOf(closedOutline)))
+                fillFeature.addNumberProperty("fanIndex", fanView.index)
+                fillFeatures.add(fillFeature)
+
+                val effectivePoints = Sector.arcPoints(
+                    state.origin, fan.leftTrueDeg, fan.rightTrueDeg, state.range.effectiveRangeM
+                ).map { Point.fromLngLat(it.lon, it.lat) }
+                val effectiveFeature = Feature.fromGeometry(LineString.fromLngLats(effectivePoints))
+                effectiveFeature.addNumberProperty("fanIndex", fanView.index)
+                effectiveFeatures.add(effectiveFeature)
+            }
+        }
+
+        style.getSourceAs<GeoJsonSource>("fans")?.setGeoJson(FeatureCollection.fromFeatures(fillFeatures))
+        style.getSourceAs<GeoJsonSource>("fans-effective")
+            ?.setGeoJson(FeatureCollection.fromFeatures(effectiveFeatures))
+    }
+
+    fun setSelectedFan(state: FanUiState?, index: Int?) {
+        selectedFanState = state
+        selectedFanIndexValue = index
+        applySelectedFan()
+    }
+
+    private fun applySelectedFan() {
+        val style = style ?: return
+        val state = selectedFanState
+        val index = selectedFanIndexValue
+        val fanView = if (state != null && index != null) state.fans.getOrNull(index) else null
+
+        val collection = if (state != null && fanView != null) {
+            val outline = Sector.sectorOutline(
+                state.origin, fanView.fan.leftTrueDeg, fanView.fan.rightTrueDeg, state.range.fanRangeM
+            ).map { Point.fromLngLat(it.lon, it.lat) }
+            val closedOutline = if (outline.isNotEmpty() && outline.first() != outline.last()) {
+                outline + outline.first()
+            } else {
+                outline
+            }
+            FeatureCollection.fromFeature(Feature.fromGeometry(LineString.fromLngLats(closedOutline)))
+        } else {
+            FeatureCollection.fromFeatures(emptyArray())
+        }
+        style.getSourceAs<GeoJsonSource>("fans-selected")?.setGeoJson(collection)
     }
 
     fun setOnLongPress(listener: (LatLon) -> Unit) {

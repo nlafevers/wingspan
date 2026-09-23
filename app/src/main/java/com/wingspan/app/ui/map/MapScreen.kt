@@ -44,6 +44,7 @@ import com.wingspan.app.data.geojson.GeoJsonCodec
 import com.wingspan.app.data.location.LocationProvider
 import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.ui.Formatters
 import com.wingspan.app.ui.editor.EditorControls
 import com.wingspan.app.ui.editor.EditorViewModel
 import com.wingspan.app.ui.editor.ZoneFileIo
@@ -69,6 +70,8 @@ fun MapScreen(
     val shooter by viewModel.shooter.collectAsStateWithLifecycle()
     val manualMode by viewModel.manualMode.collectAsStateWithLifecycle()
     val zones by viewModel.zones.collectAsStateWithLifecycle()
+    val fanState by viewModel.fanState.collectAsStateWithLifecycle()
+    val selectedFanIndex by viewModel.selectedFanIndex.collectAsStateWithLifecycle()
 
     val editorViewModel: EditorViewModel = viewModel(
         factory = EditorViewModel.factory(context.appContainer())
@@ -126,13 +129,22 @@ fun MapScreen(
     LaunchedEffect(basemap) { controller.setBasemap(basemap) }
     LaunchedEffect(shooter) { controller.setShooter(shooter) }
     LaunchedEffect(zones) { controller.setZones(zones) }
+    LaunchedEffect(fanState) { controller.setFans(fanState) }
+    LaunchedEffect(fanState, selectedFanIndex) { controller.setSelectedFan(fanState, selectedFanIndex) }
     LaunchedEffect(Unit) {
         viewModel.cameraRequests.collect { controller.animateCamera(it, zoom = maxOf(controller.currentZoom(), 15.0)) }
     }
     LaunchedEffect(controller) { controller.setOnLongPress { viewModel.setManualPosition(it) } }
     LaunchedEffect(editorRender) { controller.setEditorRender(editorRender) }
     LaunchedEffect(controller) {
-        controller.setOnTap { hit -> editorViewModel.onTap(hit, zones) }
+        controller.setOnTap { hit ->
+            when {
+                editorMode !is EditorViewModel.EditorMode.Idle -> editorViewModel.onMapTap(hit.position)
+                hit.zoneId != null -> editorViewModel.onTap(hit, zones)
+                hit.fanIndex != null -> viewModel.selectFan(hit.fanIndex)
+                else -> viewModel.selectFan(null)
+            }
+        }
         controller.setHandleDragListener(object : MapController.HandleDragListener {
             override fun onHandleMoved(index: Int, p: LatLon) {
                 editorViewModel.moveVertex(index, p)
@@ -157,21 +169,59 @@ fun MapScreen(
                 onImportZones = { importLauncher.launch(arrayOf("*/*")) },
             )
         }
-        Row(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(8.dp)) {
-            Basemap.entries.forEach {
-                FilterChip(
-                    selected = it == basemap,
-                    onClick = { viewModel.setBasemap(it) },
-                    label = { Text(it.label) },
-                )
+        val currentFanState = fanState
+        Column(
+            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(8.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Row {
+                Basemap.entries.forEach {
+                    FilterChip(
+                        selected = it == basemap,
+                        onClick = { viewModel.setBasemap(it) },
+                        label = { Text(it.label) },
+                    )
+                }
+            }
+            if (currentFanState != null) {
+                val windPart = if (currentFanState.range.windBufferM > 0) {
+                    " · Wind +${Formatters.distance(currentFanState.range.windBufferM, currentFanState.units)}"
+                } else {
+                    ""
+                }
+                Surface(modifier = Modifier.padding(top = 4.dp)) {
+                    Text(
+                        "Max ${Formatters.distance(currentFanState.range.maxRangeM, currentFanState.units)} · " +
+                            "Eff ${Formatters.distance(currentFanState.range.effectiveRangeM, currentFanState.units)}" +
+                            windPart,
+                        modifier = Modifier.padding(4.dp),
+                    )
+                }
             }
         }
-        if (manualMode) {
-            Surface(
-                color = MaterialTheme.colorScheme.tertiaryContainer,
-                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(8.dp),
-            ) {
-                Text("MANUAL POSITION — long-press map to move", modifier = Modifier.padding(8.dp))
+        Column(
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (manualMode) {
+                Surface(color = MaterialTheme.colorScheme.tertiaryContainer) {
+                    Text("MANUAL POSITION — long-press map to move", modifier = Modifier.padding(8.dp))
+                }
+            }
+            if (currentFanState != null && currentFanState.insideZone) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Text("Inside a no-fire zone — no safe field of fire", modifier = Modifier.padding(8.dp))
+                }
+            } else if (currentFanState != null && currentFanState.fans.isEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Text("No clear field of fire", modifier = Modifier.padding(8.dp))
+                }
             }
         }
         Column(
@@ -274,6 +324,15 @@ fun MapScreen(
                 radiusLabel = radiusLabel,
                 onConfirm = { name, radius -> editorViewModel.confirmFinish(name, radius) },
                 onDismiss = { editorViewModel.dismissNameDialog() },
+            )
+        }
+
+        val selectedFanView = currentFanState?.fans?.getOrNull(selectedFanIndex ?: -1)
+        if (currentFanState != null && selectedFanView != null) {
+            FanDetailSheet(
+                state = currentFanState,
+                fan = selectedFanView,
+                onDismiss = { viewModel.selectFan(null) },
             )
         }
 
