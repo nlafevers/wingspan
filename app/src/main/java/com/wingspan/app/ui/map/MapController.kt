@@ -1,6 +1,9 @@
 package com.wingspan.app.ui.map
 
 import android.content.Context
+import android.graphics.PointF
+import android.graphics.RectF
+import android.view.MotionEvent
 import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.geo.EnuProjection
 import com.wingspan.app.domain.geo.Geometry2D
@@ -11,6 +14,7 @@ import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.domain.geo.Sector
 import com.wingspan.app.domain.geo.Vec2
+import com.wingspan.app.ui.editor.EditorRender
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -46,6 +50,19 @@ class MapController(private val context: Context) {
     private var shooter: ShooterPosition? = null
     private var zones: List<NoFireZone> = emptyList()
     private var onLongPress: ((LatLon) -> Unit)? = null
+    private var onTap: ((LatLon) -> Unit)? = null
+    private var handleDragListener: HandleDragListener? = null
+    private var editorRender: EditorRender? = null
+    private var dragIndex: Int? = null
+    private var downX: Float = 0f
+    private var downY: Float = 0f
+    private var moved: Boolean = false
+
+    interface HandleDragListener {
+        fun onHandleMoved(index: Int, p: LatLon)
+        fun onHandleTapped(index: Int)
+        fun onMidpointPressed(insertAfter: Int, p: LatLon): Int
+    }
 
     fun attach(mapView: MapView, map: MapLibreMap) {
         this.map = map
@@ -58,6 +75,11 @@ class MapController(private val context: Context) {
             onLongPress?.invoke(LatLon(it.latitude, it.longitude))
             true
         }
+        map.addOnMapClickListener {
+            onTap?.invoke(LatLon(it.latitude, it.longitude))
+            true
+        }
+        mapView.setOnTouchListener { _, ev -> handleTouch(ev) }
         if (basemap != null) {
             loadStyle()
         }
@@ -101,7 +123,8 @@ class MapController(private val context: Context) {
         // 14. snapshot-fans-outline
         // 15. position-dot
         // 16. editor-fill
-        // 17. editor-outline
+        // 17. editor-outline (bound to editor-polygon)
+        // 17b. editor-outline-line (bound to editor-line; same paint, mutually exclusive with 17)
         // 18. editor-midpoints
         // 19. editor-handles
 
@@ -163,8 +186,50 @@ class MapController(private val context: Context) {
                 )
         )
 
+        style.addSource(GeoJsonSource("editor-polygon"))
+        style.addSource(GeoJsonSource("editor-line"))
+        style.addSource(GeoJsonSource("editor-midpoints"))
+        style.addSource(GeoJsonSource("editor-handles"))
+        style.addLayer(
+            FillLayer("editor-fill", "editor-polygon")
+                .withProperties(fillColor("#1E88E5"), fillOpacity(0.20f))
+        )
+        style.addLayer(
+            LineLayer("editor-outline", "editor-polygon")
+                .withProperties(lineColor("#1E88E5"), lineWidth(2f))
+        )
+        style.addLayer(
+            LineLayer("editor-outline-line", "editor-line")
+                .withProperties(lineColor("#1E88E5"), lineWidth(2f))
+        )
+        style.addLayer(
+            CircleLayer("editor-midpoints", "editor-midpoints")
+                .withProperties(
+                    circleRadius(6f),
+                    circleColor("#9E9E9E"),
+                    circleStrokeColor("#FFFFFF"),
+                    circleStrokeWidth(1f),
+                )
+        )
+        style.addLayer(
+            CircleLayer("editor-handles", "editor-handles")
+                .withProperties(
+                    circleRadius(10f),
+                    circleColor("#FFFFFF"),
+                    circleStrokeWidth(3f),
+                    circleStrokeColor(
+                        Expression.switchCase(
+                            Expression.eq(Expression.get("selected"), Expression.literal(true)),
+                            Expression.literal("#E53935"),
+                            Expression.literal("#1E88E5"),
+                        )
+                    ),
+                )
+        )
+
         applyShooter()
         applyZones()
+        applyEditorRender()
     }
 
     fun moveCamera(target: LatLon, zoom: Double? = null) {
@@ -295,5 +360,114 @@ class MapController(private val context: Context) {
 
     fun setOnLongPress(listener: (LatLon) -> Unit) {
         onLongPress = listener
+    }
+
+    fun setOnTap(listener: (LatLon) -> Unit) {
+        onTap = listener
+    }
+
+    fun setHandleDragListener(l: HandleDragListener?) {
+        handleDragListener = l
+    }
+
+    fun setEditorRender(r: EditorRender?) {
+        editorRender = r
+        applyEditorRender()
+    }
+
+    private fun applyEditorRender() {
+        val style = style ?: return
+        val r = editorRender
+
+        val polygonCollection = if (r != null && r.closed && r.ring.size >= 3) {
+            val ring = r.ring.map { Point.fromLngLat(it.lon, it.lat) }
+            FeatureCollection.fromFeature(Feature.fromGeometry(Polygon.fromLngLats(listOf(ring))))
+        } else {
+            FeatureCollection.fromFeatures(emptyArray())
+        }
+        val lineCollection = if (r != null && !r.closed && r.ring.size >= 2) {
+            val points = r.ring.map { Point.fromLngLat(it.lon, it.lat) }
+            FeatureCollection.fromFeature(Feature.fromGeometry(LineString.fromLngLats(points)))
+        } else {
+            FeatureCollection.fromFeatures(emptyArray())
+        }
+        style.getSourceAs<GeoJsonSource>("editor-polygon")?.setGeoJson(polygonCollection)
+        style.getSourceAs<GeoJsonSource>("editor-line")?.setGeoJson(lineCollection)
+
+        val handleFeatures = r?.handles?.mapIndexed { index, p ->
+            Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).apply {
+                addNumberProperty("index", index)
+                addBooleanProperty("selected", index == r.selectedIndex)
+            }
+        }.orEmpty()
+        style.getSourceAs<GeoJsonSource>("editor-handles")
+            ?.setGeoJson(FeatureCollection.fromFeatures(handleFeatures))
+
+        val midpointFeatures = r?.midpoints?.mapIndexed { insertAfter, p ->
+            Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).apply {
+                addNumberProperty("insertAfter", insertAfter)
+            }
+        }.orEmpty()
+        style.getSourceAs<GeoJsonSource>("editor-midpoints")
+            ?.setGeoJson(FeatureCollection.fromFeatures(midpointFeatures))
+    }
+
+    private fun handleTouch(ev: MotionEvent): Boolean {
+        val map = map ?: return false
+        return when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val listener = handleDragListener ?: return false
+                val x = ev.x
+                val y = ev.y
+                val handleHits = map.queryRenderedFeatures(RectF(x - 24, y - 24, x + 24, y + 24), "editor-handles")
+                if (handleHits.isNotEmpty()) {
+                    dragIndex = handleHits.first().getNumberProperty("index").toInt()
+                    downX = x
+                    downY = y
+                    moved = false
+                    map.uiSettings.isScrollGesturesEnabled = false
+                    map.uiSettings.isZoomGesturesEnabled = false
+                    return true
+                }
+                val midpointHits = map.queryRenderedFeatures(RectF(x - 24, y - 24, x + 24, y + 24), "editor-midpoints")
+                if (midpointHits.isNotEmpty()) {
+                    val insertAfter = midpointHits.first().getNumberProperty("insertAfter").toInt()
+                    downX = x
+                    downY = y
+                    moved = false
+                    dragIndex = listener.onMidpointPressed(insertAfter, latLonAt(ev))
+                    map.uiSettings.isScrollGesturesEnabled = false
+                    map.uiSettings.isZoomGesturesEnabled = false
+                    return true
+                }
+                false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val index = dragIndex ?: return false
+                val dx = ev.x - downX
+                val dy = ev.y - downY
+                if (kotlin.math.hypot(dx.toDouble(), dy.toDouble()) > 8.0) {
+                    moved = true
+                }
+                handleDragListener?.onHandleMoved(index, latLonAt(ev))
+                true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val index = dragIndex ?: return false
+                if (!moved) {
+                    handleDragListener?.onHandleTapped(index)
+                }
+                map.uiSettings.isScrollGesturesEnabled = true
+                map.uiSettings.isZoomGesturesEnabled = true
+                dragIndex = null
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun latLonAt(ev: MotionEvent): LatLon {
+        val latLng = map?.projection?.fromScreenLocation(PointF(ev.x, ev.y))
+        return LatLon(latLng?.latitude ?: 0.0, latLng?.longitude ?: 0.0)
     }
 }

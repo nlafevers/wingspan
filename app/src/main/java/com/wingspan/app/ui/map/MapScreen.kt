@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
@@ -22,7 +26,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +38,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wingspan.app.appContainer
 import com.wingspan.app.data.location.LocationProvider
 import com.wingspan.app.data.map.Basemap
+import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.ui.editor.EditorControls
+import com.wingspan.app.ui.editor.EditorViewModel
+import com.wingspan.app.ui.editor.ZoneNameDialog
 
 @Composable
 fun MapScreen(
@@ -43,6 +53,15 @@ fun MapScreen(
     val shooter by viewModel.shooter.collectAsStateWithLifecycle()
     val manualMode by viewModel.manualMode.collectAsStateWithLifecycle()
     val zones by viewModel.zones.collectAsStateWithLifecycle()
+
+    val editorViewModel: EditorViewModel = viewModel(
+        factory = EditorViewModel.factory(context.appContainer())
+    )
+    val editorMode by editorViewModel.mode.collectAsStateWithLifecycle()
+    val editorRender by editorViewModel.render.collectAsStateWithLifecycle()
+    val canFinishEditor by editorViewModel.canFinish.collectAsStateWithLifecycle()
+    val showNameDialog by editorViewModel.showNameDialog.collectAsStateWithLifecycle()
+    var addMenuExpanded by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -63,6 +82,21 @@ fun MapScreen(
         viewModel.cameraRequests.collect { controller.animateCamera(it, zoom = maxOf(controller.currentZoom(), 15.0)) }
     }
     LaunchedEffect(controller) { controller.setOnLongPress { viewModel.setManualPosition(it) } }
+    LaunchedEffect(editorRender) { controller.setEditorRender(editorRender) }
+    LaunchedEffect(controller) {
+        controller.setOnTap { editorViewModel.onMapTap(it) }
+        controller.setHandleDragListener(object : MapController.HandleDragListener {
+            override fun onHandleMoved(index: Int, p: LatLon) {
+                editorViewModel.moveVertex(index, p)
+            }
+            override fun onHandleTapped(index: Int) {
+                editorViewModel.selectVertex(index)
+            }
+            override fun onMidpointPressed(insertAfter: Int, p: LatLon): Int {
+                return editorViewModel.insertVertexAfter(insertAfter, p)
+            }
+        })
+    }
 
     Box(Modifier.fillMaxSize()) {
         MapLibreView(controller, Modifier.fillMaxSize())
@@ -87,16 +121,38 @@ fun MapScreen(
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            SmallFloatingActionButton(
-                onClick = {
-                    if (LocationProvider.hasPermission(context)) {
-                        viewModel.recenter()
-                    } else {
-                        permissionLauncher.launch(arrayOf(ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION))
+            if (editorMode is EditorViewModel.EditorMode.Idle) {
+                Box {
+                    FloatingActionButton(onClick = { addMenuExpanded = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add zone")
                     }
-                },
-            ) {
-                Icon(Icons.Default.Place, contentDescription = "My location")
+                    DropdownMenu(
+                        expanded = addMenuExpanded,
+                        onDismissRequest = { addMenuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("No-fire polygon") },
+                            onClick = {
+                                addMenuExpanded = false
+                                editorViewModel.startPolygon()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("No-fire marker") },
+                            onClick = {
+                                addMenuExpanded = false
+                                editorViewModel.startMarker()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("No-fire line") },
+                            onClick = {
+                                addMenuExpanded = false
+                                editorViewModel.startLine()
+                            },
+                        )
+                    }
+                }
             }
             SmallFloatingActionButton(
                 onClick = { viewModel.toggleManualMode() },
@@ -109,6 +165,53 @@ fun MapScreen(
             ) {
                 Icon(Icons.Default.Edit, contentDescription = "Manual position")
             }
+        }
+
+        if (editorMode !is EditorViewModel.EditorMode.Idle) {
+            Box(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
+                EditorControls(
+                    mode = editorMode,
+                    canFinish = canFinishEditor,
+                    onUndo = { editorViewModel.undoLastVertex() },
+                    onDeletePoint = { editorViewModel.deleteSelectedVertex() },
+                    onCancel = { editorViewModel.cancel() },
+                    onFinish = { editorViewModel.requestFinish() },
+                    onRadiusChange = { r ->
+                        when (editorMode) {
+                            is EditorViewModel.EditorMode.MarkerEdit -> editorViewModel.setMarkerRadius(r)
+                            is EditorViewModel.EditorMode.LineEdit -> editorViewModel.setLineBuffer(r)
+                            else -> Unit
+                        }
+                    },
+                )
+            }
+        }
+
+        if (showNameDialog) {
+            val currentMode = editorMode
+            val initialRadius = when (currentMode) {
+                is EditorViewModel.EditorMode.MarkerEdit -> currentMode.radiusM
+                is EditorViewModel.EditorMode.LineEdit -> currentMode.bufferM
+                else -> null
+            }
+            val radiusLabel = when (currentMode) {
+                is EditorViewModel.EditorMode.MarkerEdit -> "Radius (m)"
+                is EditorViewModel.EditorMode.LineEdit -> "Buffer (m)"
+                else -> "Radius (m)"
+            }
+            val initialName = when (currentMode) {
+                is EditorViewModel.EditorMode.PolygonEdit -> currentMode.name
+                is EditorViewModel.EditorMode.MarkerEdit -> currentMode.name
+                is EditorViewModel.EditorMode.LineEdit -> currentMode.name
+                else -> ""
+            }
+            ZoneNameDialog(
+                initialName = initialName,
+                initialRadiusM = initialRadius,
+                radiusLabel = radiusLabel,
+                onConfirm = { name, radius -> editorViewModel.confirmFinish(name, radius) },
+                onDismiss = { editorViewModel.dismissNameDialog() },
+            )
         }
     }
 }
