@@ -29,26 +29,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wingspan.app.AppContainer
+import com.wingspan.app.appContainer
 import com.wingspan.app.domain.ballistics.Choke
 import com.wingspan.app.domain.ballistics.PelletMaterial
 import com.wingspan.app.domain.ballistics.ShotSize
 import com.wingspan.app.domain.ballistics.UnitSystem
 import com.wingspan.app.ui.Formatters
-
-/**
- * Provides the [AppContainer] used to build this screen's [SettingsViewModel] by default.
- * Screens that wire this into the navigation graph (see WS-6.5) should either provide this
- * composition local near the app root, or construct [SettingsViewModel] explicitly and pass it in.
- */
-val LocalAppContainer = staticCompositionLocalOf<AppContainer> {
-    error("LocalAppContainer not provided")
-}
 
 private fun <T : Enum<T>> enumLabel(value: T): String =
     value.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
@@ -116,7 +107,9 @@ private fun NumericField(
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(LocalAppContainer.current)),
+    viewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModel.factory(LocalContext.current.appContainer())
+    ),
 ) {
     val settings by viewModel.settings.collectAsState()
     val preview by viewModel.preview.collectAsState()
