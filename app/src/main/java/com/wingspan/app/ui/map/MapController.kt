@@ -37,14 +37,6 @@ import org.maplibre.android.style.layers.PropertyFactory.lineDasharray
 import org.maplibre.android.style.layers.PropertyFactory.lineJoin
 import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
 import org.maplibre.android.style.layers.PropertyFactory.lineWidth
-import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
-import org.maplibre.android.style.layers.PropertyFactory.textColor
-import org.maplibre.android.style.layers.PropertyFactory.textField
-import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
-import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
-import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
-import org.maplibre.android.style.layers.PropertyFactory.textSize
-import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -105,6 +97,7 @@ class MapController(private val context: Context) {
             onLongPress?.invoke(LatLon(it.latitude, it.longitude))
             true
         }
+        map.addOnCameraMoveListener { updateSelectedFanLabels() }
         map.addOnMapClickListener {
             val position = LatLon(it.latitude, it.longitude)
             val screenPoint = map.projection.toScreenLocation(it)
@@ -166,15 +159,14 @@ class MapController(private val context: Context) {
         // 9.  fans-outline
         // 10. fans-effective
         // 11. fans-selected
-        // 12. fans-selected-labels
-        // 13. snapshot-fans-fill
-        // 14. snapshot-fans-outline
-        // 15. position-dot
-        // 16. editor-fill
-        // 17. editor-outline (bound to editor-polygon)
-        // 17b. editor-outline-line (bound to editor-line; same paint, mutually exclusive with 17)
-        // 18. editor-midpoints
-        // 19. editor-handles
+        // 12. snapshot-fans-fill
+        // 13. snapshot-fans-outline
+        // 14. position-dot
+        // 15. editor-fill
+        // 16. editor-outline (bound to editor-polygon)
+        // 16b. editor-outline-line (bound to editor-line; same paint, mutually exclusive with 16)
+        // 17. editor-midpoints
+        // 18. editor-handles
 
         style.addSource(GeoJsonSource("position-accuracy"))
         style.addLayer(
@@ -249,21 +241,8 @@ class MapController(private val context: Context) {
             LineLayer("fans-selected", "fans-selected")
                 .withProperties(lineColor("#FFD600"), lineWidth(4f))
         )
-        style.addSource(GeoJsonSource("fans-selected-labels"))
-        style.addLayer(
-            SymbolLayer("fans-selected-labels", "fans-selected-labels")
-                .withProperties(
-                    textField(Expression.get("label")),
-                    textSize(13f),
-                    textColor("#1B5E20"),
-                    textHaloColor("#FFFFFF"),
-                    textHaloWidth(1.5f),
-                    textAllowOverlap(true),
-                    textIgnorePlacement(true),
-                )
-        )
 
-        // Steps 13-14 (snapshot-fans) slot in here in future work, above.
+        // Steps 12-13 (snapshot-fans) slot in here in future work, above.
 
         style.addSource(GeoJsonSource("position"))
         style.addLayer(
@@ -506,6 +485,49 @@ class MapController(private val context: Context) {
         selectedFanState = state
         selectedFanIndexValue = index
         applySelectedFan()
+        updateSelectedFanLabels()
+    }
+
+    /**
+     * Screen-space position and text for a selected fan's left/right bearing label. Rendered as
+     * Compose text overlaid on the map, not a MapLibre SymbolLayer: none of the bundled offline
+     * basemap styles declare a "glyphs" URL, which MapLibre requires to fetch/rasterize font
+     * glyphs for any text-field - without it, SymbolLayer text silently renders nothing. Bundling
+     * offline glyph assets is future work; a screen-space overlay works today with no font
+     * dependency at all.
+     */
+    data class SelectedFanLabels(val left: PointF, val leftText: String, val right: PointF, val rightText: String)
+
+    private var onSelectedFanLabelsChanged: ((SelectedFanLabels?) -> Unit)? = null
+
+    fun setSelectedFanLabelsListener(listener: ((SelectedFanLabels?) -> Unit)?) {
+        onSelectedFanLabelsChanged = listener
+        updateSelectedFanLabels()
+    }
+
+    private fun updateSelectedFanLabels() {
+        val map = map ?: return
+        val state = selectedFanState
+        val index = selectedFanIndexValue
+        val fanView = if (state != null && index != null) state.fans.getOrNull(index) else null
+
+        val labels = if (state != null && fanView != null && !fanView.fan.fullCircle) {
+            // Labels sit a bit inside the fan's outer arc (not right on the edge) so they stay
+            // legible even when the arc runs close to the screen edge.
+            val proj = EnuProjection(state.origin)
+            val labelRadiusM = state.range.fanRangeM * 0.92
+            val leftLatLon = proj.fromEnu(Geometry2D.bearingToUnitVector(fanView.fan.leftTrueDeg) * labelRadiusM)
+            val rightLatLon = proj.fromEnu(Geometry2D.bearingToUnitVector(fanView.fan.rightTrueDeg) * labelRadiusM)
+            SelectedFanLabels(
+                left = map.projection.toScreenLocation(LatLng(leftLatLon.lat, leftLatLon.lon)),
+                leftText = Formatters.bearing(fanView.leftMagDeg),
+                right = map.projection.toScreenLocation(LatLng(rightLatLon.lat, rightLatLon.lon)),
+                rightText = Formatters.bearing(fanView.rightMagDeg),
+            )
+        } else {
+            null
+        }
+        onSelectedFanLabelsChanged?.invoke(labels)
     }
 
     private fun applySelectedFan() {
@@ -514,9 +536,7 @@ class MapController(private val context: Context) {
         val index = selectedFanIndexValue
         val fanView = if (state != null && index != null) state.fans.getOrNull(index) else null
 
-        val outlineCollection: FeatureCollection
-        val labelCollection: FeatureCollection
-        if (state != null && fanView != null) {
+        val outlineCollection = if (state != null && fanView != null) {
             val outline = Sector.sectorOutline(
                 state.origin, fanView.fan.leftTrueDeg, fanView.fan.rightTrueDeg, state.range.fanRangeM
             ).map { Point.fromLngLat(it.lon, it.lat) }
@@ -525,30 +545,11 @@ class MapController(private val context: Context) {
             } else {
                 outline
             }
-            outlineCollection =
-                FeatureCollection.fromFeature(Feature.fromGeometry(LineString.fromLngLats(closedOutline)))
-
-            // Left/right bearing labels sit a bit inside the fan's outer arc (not right on the
-            // edge) so they stay legible even when the arc runs close to the screen edge.
-            labelCollection = if (fanView.fan.fullCircle) {
-                FeatureCollection.fromFeatures(emptyArray())
-            } else {
-                val proj = EnuProjection(state.origin)
-                val labelRadiusM = state.range.fanRangeM * 0.92
-                val leftPoint = proj.fromEnu(Geometry2D.bearingToUnitVector(fanView.fan.leftTrueDeg) * labelRadiusM)
-                val rightPoint = proj.fromEnu(Geometry2D.bearingToUnitVector(fanView.fan.rightTrueDeg) * labelRadiusM)
-                val leftFeature = Feature.fromGeometry(Point.fromLngLat(leftPoint.lon, leftPoint.lat))
-                leftFeature.addStringProperty("label", Formatters.bearing(fanView.leftMagDeg))
-                val rightFeature = Feature.fromGeometry(Point.fromLngLat(rightPoint.lon, rightPoint.lat))
-                rightFeature.addStringProperty("label", Formatters.bearing(fanView.rightMagDeg))
-                FeatureCollection.fromFeatures(listOf(leftFeature, rightFeature))
-            }
+            FeatureCollection.fromFeature(Feature.fromGeometry(LineString.fromLngLats(closedOutline)))
         } else {
-            outlineCollection = FeatureCollection.fromFeatures(emptyArray())
-            labelCollection = FeatureCollection.fromFeatures(emptyArray())
+            FeatureCollection.fromFeatures(emptyArray())
         }
         style.getSourceAs<GeoJsonSource>("fans-selected")?.setGeoJson(outlineCollection)
-        style.getSourceAs<GeoJsonSource>("fans-selected-labels")?.setGeoJson(labelCollection)
     }
 
     fun setOnLongPress(listener: (LatLon) -> Unit) {

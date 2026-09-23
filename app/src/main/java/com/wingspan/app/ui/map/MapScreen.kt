@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
@@ -37,9 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.math.roundToInt
 import com.wingspan.app.appContainer
 import com.wingspan.app.data.geojson.GeoJsonCodec
 import com.wingspan.app.data.location.LocationProvider
@@ -134,6 +138,8 @@ fun MapScreen(
     LaunchedEffect(zones) { controller.setZones(zones) }
     LaunchedEffect(fanState) { controller.setFans(fanState) }
     LaunchedEffect(fanState, selectedFanIndex) { controller.setSelectedFan(fanState, selectedFanIndex) }
+    var selectedFanLabels by remember { mutableStateOf<MapController.SelectedFanLabels?>(null) }
+    LaunchedEffect(controller) { controller.setSelectedFanLabelsListener { selectedFanLabels = it } }
     LaunchedEffect(Unit) {
         viewModel.cameraRequests.collect { controller.animateCamera(it, zoom = maxOf(controller.currentZoom(), 15.0)) }
     }
@@ -163,6 +169,10 @@ fun MapScreen(
 
     Box(Modifier.fillMaxSize()) {
         MapLibreView(controller, Modifier.fillMaxSize())
+        selectedFanLabels?.let { labels ->
+            BearingLabel(labels.left.x, labels.left.y, labels.leftText)
+            BearingLabel(labels.right.x, labels.right.y, labels.rightText)
+        }
         Box(Modifier.align(Alignment.TopStart).padding(8.dp)) {
             MapMenu(
                 onSettings = onOpenSettings,
@@ -424,5 +434,20 @@ fun MapScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun BearingLabel(x: Float, y: Float, text: String) {
+    val density = LocalDensity.current
+    val halfWidthPx = with(density) { 22.dp.toPx() }
+    val halfHeightPx = with(density) { 10.dp.toPx() }
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+        modifier = Modifier.offset {
+            IntOffset((x - halfWidthPx).roundToInt(), (y - halfHeightPx).roundToInt())
+        },
+    ) {
+        Text(text, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
     }
 }
