@@ -11,6 +11,7 @@ import com.wingspan.app.data.ZoneRepository
 import com.wingspan.app.data.location.LocationFix
 import com.wingspan.app.data.location.LocationProvider
 import com.wingspan.app.data.map.Basemap
+import com.wingspan.app.domain.ballistics.LoadSettings
 import com.wingspan.app.domain.ballistics.RangeCalculator
 import com.wingspan.app.domain.ballistics.RangeResult
 import com.wingspan.app.domain.ballistics.UnitSystem
@@ -109,7 +110,14 @@ class MapViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val rangeResult: Flow<RangeResult> = settingsRepository.settings
-        .map { RangeCalculator.compute(it.toBallisticInput()) }
+        .map {
+            // See SettingsViewModel.preview for why this can throw (a non-positive custom
+            // diameter/density fails Pellet's validation) and why it's guarded here too: this
+            // reads the same persisted settings, so an invalid value would otherwise crash the
+            // live map's fan computation on every recomposition, and on every future launch.
+            runCatching { RangeCalculator.compute(it.toBallisticInput()) }
+                .getOrElse { RangeCalculator.compute(LoadSettings().toBallisticInput()) }
+        }
         .flowOn(Dispatchers.Default)
 
     private val throttledShooter = shooter.distinctUntilChanged { old, new ->

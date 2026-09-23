@@ -30,7 +30,14 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository) : Vi
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val preview: StateFlow<RangeResult?> = settings.mapLatest {
-        withContext(Dispatchers.Default) { RangeCalculator.compute(it.toBallisticInput()) }
+        withContext(Dispatchers.Default) {
+            // A custom diameter/density of exactly zero (or negative) fails Pellet's own
+            // validation. That shouldn't reach here anymore now that the custom fields reject
+            // non-positive input, but this is cheap insurance against ANY other path producing
+            // one: hide the preview rather than crash on every recomposition (and, since this
+            // reads persisted settings, on every future launch too).
+            runCatching { RangeCalculator.compute(it.toBallisticInput()) }.getOrNull()
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun setShotSize(shotSize: ShotSize) {
