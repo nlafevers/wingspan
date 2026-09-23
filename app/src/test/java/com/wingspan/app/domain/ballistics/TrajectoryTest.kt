@@ -55,4 +55,44 @@ class TrajectoryTest {
         assertTrue("distance ($distance) should be > 90 m", distance > 90.0)
         assertTrue("distance ($distance) should be < 130 m", distance < 130.0)
     }
+
+    @Test
+    fun simulateWithNoWindMatchesHorizontalRangeM() {
+        val pellet = Pellet.of(0.110, 11.34)
+        val muzzleVelocityMps = Units.fpsToMps(1250.0)
+
+        val simulated = Trajectory.simulate(pellet, muzzleVelocityMps, 30.0).rangeM
+        val expected = Trajectory.horizontalRangeM(pellet, muzzleVelocityMps, 30.0)
+
+        assertEquals(expected, simulated, 1e-9)
+    }
+
+    @Test
+    fun tailwindIncreasesRange() {
+        val pellet = Pellet.of(0.110, 11.34)
+        val muzzleVelocityMps = Units.fpsToMps(1250.0)
+
+        val noWindRangeM = Trajectory.simulate(pellet, muzzleVelocityMps, 30.0, tailwindMps = 0.0).rangeM
+        val tailwindRangeM = Trajectory.simulate(pellet, muzzleVelocityMps, 30.0, tailwindMps = 10.0).rangeM
+
+        assertTrue(
+            "Expected tailwind range ($tailwindRangeM) > no-wind range ($noWindRangeM)",
+            tailwindRangeM > noWindRangeM,
+        )
+    }
+
+    @Test
+    fun timeOfFlightIsPositiveAndIncreasesWithLaunchAngle() {
+        val pellet = Pellet.of(0.110, 11.34)
+        val muzzleVelocityMps = Units.fpsToMps(1250.0)
+
+        val timeOfFlight20 = Trajectory.simulate(pellet, muzzleVelocityMps, 20.0).timeOfFlightS
+        val timeOfFlight40 = Trajectory.simulate(pellet, muzzleVelocityMps, 40.0).timeOfFlightS
+
+        assertTrue("Expected timeOfFlight20 ($timeOfFlight20) > 0", timeOfFlight20 > 0.0)
+        assertTrue(
+            "Expected timeOfFlight40 ($timeOfFlight40) > timeOfFlight20 ($timeOfFlight20)",
+            timeOfFlight40 > timeOfFlight20,
+        )
+    }
 }

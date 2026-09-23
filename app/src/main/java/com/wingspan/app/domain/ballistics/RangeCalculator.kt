@@ -1,5 +1,8 @@
 package com.wingspan.app.domain.ballistics
 
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 
 object RangeCalculator {
@@ -28,6 +31,27 @@ object RangeCalculator {
         val effectiveRangeM = min(energyLimitedRangeM, patternLimitedRangeM).coerceAtMost(maxRangeM)
         val muzzleEnergyJ = 0.5 * pellet.massKg * v0 * v0
 
+        val windBufferM = if (input.windSpeedMps <= 0.0) {
+            0.0
+        } else {
+            var downwindRangeM = Double.NEGATIVE_INFINITY
+            var windAngleDeg = 10.0
+            while (windAngleDeg <= 50.0) {
+                val range = Trajectory.simulate(pellet, v0, windAngleDeg, tailwindMps = input.windSpeedMps).rangeM
+                if (range > downwindRangeM) {
+                    downwindRangeM = range
+                }
+                windAngleDeg += 1.0
+            }
+            val downwindOffsetM = (downwindRangeM - maxRangeM).coerceAtLeast(0.0)
+
+            val noWind = Trajectory.simulate(pellet, v0, optimalAngleDeg)
+            val vacuumTimeS = noWind.rangeM / (v0 * cos(optimalAngleDeg * PI / 180.0))
+            val crosswindOffsetM = input.windSpeedMps * (noWind.timeOfFlightS - vacuumTimeS).coerceAtLeast(0.0)
+
+            max(downwindOffsetM, crosswindOffsetM)
+        }
+
         return RangeResult(
             maxRangeM = maxRangeM,
             optimalAngleDeg = optimalAngleDeg,
@@ -35,6 +59,7 @@ object RangeCalculator {
             energyLimitedRangeM = energyLimitedRangeM,
             patternLimitedRangeM = patternLimitedRangeM,
             muzzleEnergyJ = muzzleEnergyJ,
+            windBufferM = windBufferM,
         )
     }
 }

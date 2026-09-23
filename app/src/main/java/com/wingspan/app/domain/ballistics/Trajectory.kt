@@ -14,38 +14,42 @@ object Trajectory {
 
     private data class Derivative(val dx: Double, val dy: Double, val dvx: Double, val dvy: Double)
 
-    private fun derivative(state: State, k: Double): Derivative {
-        val v = hypot(state.vx, state.vy)
+    data class TrajectoryResult(val rangeM: Double, val timeOfFlightS: Double)
+
+    private fun derivative(state: State, k: Double, tailwindMps: Double): Derivative {
+        val vrelX = state.vx - tailwindMps
+        val vrelY = state.vy
+        val v = hypot(vrelX, vrelY)
         val mach = v / DragModel.SPEED_OF_SOUND_MPS
         val cd = DragModel.dragCoefficient(mach)
-        val ax = -k * cd * v * state.vx
-        val ay = -k * cd * v * state.vy - DragModel.GRAVITY_MPS2
+        val ax = -k * cd * v * vrelX
+        val ay = -k * cd * v * vrelY - DragModel.GRAVITY_MPS2
         return Derivative(dx = state.vx, dy = state.vy, dvx = ax, dvy = ay)
     }
 
-    private fun step(state: State, dt: Double, k: Double): State {
-        val k1 = derivative(state, k)
+    private fun step(state: State, dt: Double, k: Double, tailwindMps: Double): State {
+        val k1 = derivative(state, k, tailwindMps)
         val s2 = State(
             x = state.x + k1.dx * dt / 2.0,
             y = state.y + k1.dy * dt / 2.0,
             vx = state.vx + k1.dvx * dt / 2.0,
             vy = state.vy + k1.dvy * dt / 2.0,
         )
-        val k2 = derivative(s2, k)
+        val k2 = derivative(s2, k, tailwindMps)
         val s3 = State(
             x = state.x + k2.dx * dt / 2.0,
             y = state.y + k2.dy * dt / 2.0,
             vx = state.vx + k2.dvx * dt / 2.0,
             vy = state.vy + k2.dvy * dt / 2.0,
         )
-        val k3 = derivative(s3, k)
+        val k3 = derivative(s3, k, tailwindMps)
         val s4 = State(
             x = state.x + k3.dx * dt,
             y = state.y + k3.dy * dt,
             vx = state.vx + k3.dvx * dt,
             vy = state.vy + k3.dvy * dt,
         )
-        val k4 = derivative(s4, k)
+        val k4 = derivative(s4, k, tailwindMps)
 
         return State(
             x = state.x + (dt / 6.0) * (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx),
@@ -55,12 +59,13 @@ object Trajectory {
         )
     }
 
-    fun horizontalRangeM(
+    fun simulate(
         pellet: Pellet,
         muzzleVelocityMps: Double,
         launchAngleDeg: Double,
+        tailwindMps: Double = 0.0,
         dtSeconds: Double = 0.002,
-    ): Double {
+    ): TrajectoryResult {
         val k = pellet.dragFactor
         val angleRad = launchAngleDeg * PI / 180.0
         var state = State(
@@ -72,16 +77,25 @@ object Trajectory {
 
         var steps = 0
         while (steps < MAX_STEPS) {
-            val next = step(state, dtSeconds, k)
+            val next = step(state, dtSeconds, k, tailwindMps)
             if (next.y < 0.0) {
                 val t = state.y / (state.y - next.y)
-                return state.x + t * (next.x - state.x)
+                val rangeM = state.x + t * (next.x - state.x)
+                val timeOfFlightS = steps * dtSeconds + t * dtSeconds
+                return TrajectoryResult(rangeM = rangeM, timeOfFlightS = timeOfFlightS)
             }
             state = next
             steps++
         }
-        return state.x
+        return TrajectoryResult(rangeM = state.x, timeOfFlightS = steps * dtSeconds)
     }
+
+    fun horizontalRangeM(
+        pellet: Pellet,
+        muzzleVelocityMps: Double,
+        launchAngleDeg: Double,
+        dtSeconds: Double = 0.002,
+    ): Double = simulate(pellet, muzzleVelocityMps, launchAngleDeg, 0.0, dtSeconds).rangeM
 
     fun flatFireDistanceToEnergyM(
         pellet: Pellet,

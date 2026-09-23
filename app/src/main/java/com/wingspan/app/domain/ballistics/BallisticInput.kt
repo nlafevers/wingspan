@@ -6,4 +6,5 @@ data class BallisticInput(
     val muzzleVelocityFps: Double,
     val choke: Choke,
     val energyThresholdFtLbf: Double,
+    val windSpeedMps: Double = 0.0,
 )

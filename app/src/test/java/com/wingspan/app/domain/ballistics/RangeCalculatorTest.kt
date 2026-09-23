@@ -118,4 +118,43 @@ class RangeCalculatorTest {
         )
         assertEquals("pattern", result.effectiveRangeLimiter)
     }
+
+    @Test
+    fun `zero wind speed yields zero wind buffer and fanRangeM equal to maxRangeM`() {
+        val result = RangeCalculator.compute(
+            BallisticInput(
+                diameterInches = 0.110,
+                densityGcc = leadDensity,
+                muzzleVelocityFps = 1250.0,
+                choke = Choke.MODIFIED,
+                energyThresholdFtLbf = 1.5,
+            ),
+        )
+        assertEquals(0.0, result.windBufferM, 1e-9)
+        assertEquals(result.maxRangeM, result.fanRangeM, 1e-9)
+    }
+
+    @Test
+    fun `20 mph wind increases the wind buffer without changing range or energy results`() {
+        val noWindInput = BallisticInput(
+            diameterInches = 0.110,
+            densityGcc = leadDensity,
+            muzzleVelocityFps = 1250.0,
+            choke = Choke.MODIFIED,
+            energyThresholdFtLbf = 1.5,
+        )
+        val windInput = noWindInput.copy(windSpeedMps = 8.94)
+
+        val noWindResult = RangeCalculator.compute(noWindInput)
+        val windResult = RangeCalculator.compute(windInput)
+
+        assertTrue("Expected windBufferM > 0, got ${windResult.windBufferM}", windResult.windBufferM > 0.0)
+        assertTrue(
+            "Expected fanRangeM (${windResult.fanRangeM}) > maxRangeM (${windResult.maxRangeM})",
+            windResult.fanRangeM > windResult.maxRangeM,
+        )
+        assertEquals(noWindResult.maxRangeM, windResult.maxRangeM, 1e-9)
+        assertEquals(noWindResult.effectiveRangeM, windResult.effectiveRangeM, 1e-9)
+        assertEquals(noWindResult.muzzleEnergyJ, windResult.muzzleEnergyJ, 1e-9)
+    }
 }
