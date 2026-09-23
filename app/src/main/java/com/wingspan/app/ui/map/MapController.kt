@@ -83,8 +83,9 @@ class MapController(private val context: Context) {
         map.addOnMapClickListener {
             val position = LatLon(it.latitude, it.longitude)
             val screenPoint = map.projection.toScreenLocation(it)
+            val hitBox = RectF(screenPoint.x - 12f, screenPoint.y - 12f, screenPoint.x + 12f, screenPoint.y + 12f)
             val features = map.queryRenderedFeatures(
-                screenPoint,
+                hitBox,
                 "zones-marker-points",
                 "zones-marker-circles-fill",
                 "zones-polygons-fill",
@@ -356,6 +357,24 @@ class MapController(private val context: Context) {
                             bufferFeature.addNumberProperty("zoneId", zone.id)
                             bufferFeature.addStringProperty("name", zone.name)
                             lineBufferFeatures.add(bufferFeature)
+                        }
+                        // Per-segment rectangles leave a wedge-shaped gap on the reflex side of a
+                        // bend (and an endpoint isn't capped at all); a disc at every vertex closes
+                        // that gap so the rendered corridor matches FanCalculator's actual
+                        // distance-to-segment blocking, which already covers points near a vertex.
+                        for (vertex in zone.vertices) {
+                            val jointRing = Sector.circleOutline(vertex, zone.bufferM).map { p ->
+                                Point.fromLngLat(p.lon, p.lat)
+                            }
+                            val closedJointRing = if (jointRing.isNotEmpty() && jointRing.first() != jointRing.last()) {
+                                jointRing + jointRing.first()
+                            } else {
+                                jointRing
+                            }
+                            val jointFeature = Feature.fromGeometry(Polygon.fromLngLats(listOf(closedJointRing)))
+                            jointFeature.addNumberProperty("zoneId", zone.id)
+                            jointFeature.addStringProperty("name", zone.name)
+                            lineBufferFeatures.add(jointFeature)
                         }
                     }
                 }
