@@ -760,7 +760,7 @@ Goal: a wind speed setting produces a safety buffer that lengthens the fans and 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build passes, `TrajectoryTest` and `RangeCalculatorTest` pass, and the pre-existing zero-wind assertions in those tests still hold unmodified.
 
-- [ ] **WS-6.2** Add the wind-speed setting and persist it
+- [x] **WS-6.2** Add the wind-speed setting and persist it (Commit: b2f56a2)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt, app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/main/java/com/wingspan/app/domain/ballistics/BallisticInput.kt, app/src/test/java/com/wingspan/app/domain/ballistics/LoadSettingsTest.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt, app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/test/java/com/wingspan/app/domain/ballistics/LoadSettingsTest.kt
