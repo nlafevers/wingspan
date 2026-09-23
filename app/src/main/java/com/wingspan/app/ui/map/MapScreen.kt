@@ -56,6 +56,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MapScreen(
+    onOpenSettings: () -> Unit,
+    onOpenOffline: () -> Unit,
+    onOpenSnapshots: () -> Unit,
     viewModel: MapViewModel = viewModel(factory = MapViewModel.factory(LocalContext.current.appContainer()))
 ) {
     val context = LocalContext.current
@@ -147,9 +150,9 @@ fun MapScreen(
         MapLibreView(controller, Modifier.fillMaxSize())
         Box(Modifier.align(Alignment.TopStart).padding(8.dp)) {
             MapMenu(
-                onSettings = {},
-                onOffline = {},
-                onSnapshots = {},
+                onSettings = onOpenSettings,
+                onOffline = onOpenOffline,
+                onSnapshots = onOpenSnapshots,
                 onExportZones = { exportLauncher.launch(ZoneFileIo.suggestedExportName()) },
                 onImportZones = { importLauncher.launch(arrayOf("*/*")) },
             )
