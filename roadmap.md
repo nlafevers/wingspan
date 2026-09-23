@@ -799,7 +799,7 @@ Goal: a wind speed setting produces a safety buffer that lengthens the fans and 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build and `FormattersTest` pass.
 
-- [ ] **WS-6.5** Add app navigation and wire the map menu to Settings
+- [x] **WS-6.5** Add app navigation and wire the map menu to Settings (Commit: 52c68f4)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/MainActivity.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/map/MapMenu.kt, app/src/main/java/com/wingspan/app/ui/settings/SettingsScreen.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/WingspanApp.kt, app/src/main/java/com/wingspan/app/MainActivity.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
