@@ -674,7 +674,7 @@ Acceptance criteria for Phase 4:
 
 Goal: users can draw no-fire polygons and markers by tapping, refine them by dragging handles, edit or delete existing zones, and import/export zones as GeoJSON.
 
-- [ ] **WS-5.1** Add editor state, pure editor geometry helpers, and the draw-by-tapping flow
+- [x] **WS-5.1** Add editor state, pure editor geometry helpers, and the draw-by-tapping flow (Commit: 88a26f9)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/editor/EditorGeometry.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorViewModel.kt, app/src/main/java/com/wingspan/app/ui/editor/ZoneDialogs.kt, app/src/test/java/com/wingspan/app/ui/editor/EditorGeometryTest.kt
