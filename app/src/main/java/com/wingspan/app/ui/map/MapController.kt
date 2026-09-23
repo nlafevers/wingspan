@@ -137,22 +137,21 @@ class MapController(private val context: Context) {
         // 2.  zones-polygons-fill
         // 3.  zones-polygons-outline
         // 4.  zones-marker-circles-fill
-        // 5.  zones-marker-circles-outline
-        // 6.  zones-marker-points
-        // 7.  zones-lines-buffer-stroke
-        // 8.  zones-lines-outline
-        // 9.  fans-fill
-        // 10. fans-outline
-        // 11. fans-effective
-        // 12. fans-selected
-        // 13. snapshot-fans-fill
-        // 14. snapshot-fans-outline
-        // 15. position-dot
-        // 16. editor-fill
-        // 17. editor-outline (bound to editor-polygon)
-        // 17b. editor-outline-line (bound to editor-line; same paint, mutually exclusive with 17)
-        // 18. editor-midpoints
-        // 19. editor-handles
+        // 5.  zones-marker-points
+        // 6.  zones-lines-buffer-stroke
+        // 7.  zones-lines-outline
+        // 8.  fans-fill
+        // 9.  fans-outline
+        // 10. fans-effective
+        // 11. fans-selected
+        // 12. snapshot-fans-fill
+        // 13. snapshot-fans-outline
+        // 14. position-dot
+        // 15. editor-fill
+        // 16. editor-outline (bound to editor-polygon)
+        // 16b. editor-outline-line (bound to editor-line; same paint, mutually exclusive with 16)
+        // 17. editor-midpoints
+        // 18. editor-handles
 
         style.addSource(GeoJsonSource("position-accuracy"))
         style.addLayer(
@@ -175,10 +174,6 @@ class MapController(private val context: Context) {
         style.addLayer(
             FillLayer("zones-marker-circles-fill", "zones-marker-circles")
                 .withProperties(fillColor("#D32F2F"), fillOpacity(0.25f))
-        )
-        style.addLayer(
-            LineLayer("zones-marker-circles-outline", "zones-marker-circles")
-                .withProperties(lineColor("#B71C1C"), lineWidth(1.5f))
         )
         style.addLayer(
             CircleLayer("zones-marker-points", "zones-marker-points")
