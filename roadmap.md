@@ -695,7 +695,7 @@ Goal: users can draw no-fire polygons and markers by tapping, refine them by dra
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build and `EditorGeometryTest` pass.
 
-- [ ] **WS-5.2** Render the editor on the map and implement handle dragging
+- [x] **WS-5.2** Render the editor on the map and implement handle dragging (Commit: 04a8e07)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorViewModel.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorGeometry.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorControls.kt
