@@ -5,15 +5,12 @@ import android.graphics.PointF
 import android.graphics.RectF
 import android.view.MotionEvent
 import com.wingspan.app.data.map.Basemap
-import com.wingspan.app.domain.geo.EnuProjection
-import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.domain.geo.Sector
-import com.wingspan.app.domain.geo.Vec2
 import com.wingspan.app.ui.editor.EditorRender
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -24,13 +21,17 @@ import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
 import org.maplibre.android.style.layers.PropertyFactory.fillColor
 import org.maplibre.android.style.layers.PropertyFactory.fillOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineCap
 import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineJoin
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
 import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
@@ -38,6 +39,8 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
+import kotlin.math.cos
+import kotlin.math.pow
 
 /**
  * The result of a tap on the map: where it landed, and the zone (if any) hit there.
@@ -48,6 +51,12 @@ data class TapHit(val position: LatLon, val zoneId: Long?)
  * The only place in the app that talks to MapLibre directly.
  */
 class MapController(private val context: Context) {
+
+    companion object {
+        // Web Mercator ground resolution at the equator, zoom 0 (meters/pixel); pixels-per-meter
+        // at any zoom/latitude is 2^zoom / (this * cos(latitude)).
+        private const val EARTH_MERCATOR_METERS_PER_PIXEL_AT_ZOOM0 = 156543.03392804097
+    }
 
     private var map: MapLibreMap? = null
     private var style: Style? = null
@@ -90,7 +99,7 @@ class MapController(private val context: Context) {
                 "zones-marker-circles-fill",
                 "zones-polygons-fill",
                 "zones-lines-outline",
-                "zones-lines-buffer-fill",
+                "zones-lines-buffer-stroke",
             )
             val zoneId = features.firstOrNull()?.getNumberProperty("zoneId")?.toLong()
             onTap?.invoke(TapHit(position, zoneId))
@@ -130,7 +139,7 @@ class MapController(private val context: Context) {
         // 4.  zones-marker-circles-fill
         // 5.  zones-marker-circles-outline
         // 6.  zones-marker-points
-        // 7.  zones-lines-buffer-fill
+        // 7.  zones-lines-buffer-stroke
         // 8.  zones-lines-outline
         // 9.  fans-fill
         // 10. fans-outline
@@ -155,7 +164,6 @@ class MapController(private val context: Context) {
         style.addSource(GeoJsonSource("zones-marker-circles"))
         style.addSource(GeoJsonSource("zones-marker-points"))
         style.addSource(GeoJsonSource("zones-lines"))
-        style.addSource(GeoJsonSource("zones-lines-buffer"))
         style.addLayer(
             FillLayer("zones-polygons-fill", "zones-polygons")
                 .withProperties(fillColor("#D32F2F"), fillOpacity(0.30f))
@@ -182,8 +190,22 @@ class MapController(private val context: Context) {
                 )
         )
         style.addLayer(
-            FillLayer("zones-lines-buffer-fill", "zones-lines-buffer")
-                .withProperties(fillColor("#D32F2F"), fillOpacity(0.20f))
+            LineLayer("zones-lines-buffer-stroke", "zones-lines")
+                .withProperties(
+                    lineColor("#D32F2F"),
+                    lineOpacity(0.30f),
+                    lineCap(Property.LINE_CAP_ROUND),
+                    lineJoin(Property.LINE_JOIN_ROUND),
+                    lineWidth(
+                        Expression.interpolate(
+                            Expression.exponential(2f),
+                            Expression.zoom(),
+                            Expression.stop(0f, Expression.get("bufferPxZ0")),
+                            Expression.stop(20f, Expression.get("bufferPxZ20")),
+                        )
+                    ),
+                )
+                .withFilter(Expression.gt(Expression.get("bufferPxZ0"), Expression.literal(0f)))
         )
         style.addLayer(
             LineLayer("zones-lines-outline", "zones-lines")
@@ -312,7 +334,6 @@ class MapController(private val context: Context) {
         val markerCircleFeatures = mutableListOf<Feature>()
         val markerPointFeatures = mutableListOf<Feature>()
         val lineFeatures = mutableListOf<Feature>()
-        val lineBufferFeatures = mutableListOf<Feature>()
 
         for (zone in zones) {
             when (zone) {
@@ -342,41 +363,26 @@ class MapController(private val context: Context) {
                     val lineFeature = Feature.fromGeometry(LineString.fromLngLats(linePoints))
                     lineFeature.addNumberProperty("zoneId", zone.id)
                     lineFeature.addStringProperty("name", zone.name)
-                    lineFeatures.add(lineFeature)
-
+                    // The buffer corridor is drawn as a translucent stroke on this same line
+                    // (see "zones-lines-buffer-stroke"), not as filled rectangles/discs: MapLibre
+                    // alpha-blends overlapping translucent polygons per-triangle, so per-segment
+                    // shapes double-darken at every joint. A single continuous stroke with round
+                    // joins/caps has no overlap. Its width is a meters-to-pixels approximation
+                    // (exact at this zone's own latitude, interpolated exactly across zoom via the
+                    // 2^zoom scaling of Web Mercator) rather than an exact projected polygon; the
+                    // real no-fire blocking math in FanCalculator is unaffected, since it works in
+                    // real meters independently of this rendering.
                     if (zone.bufferM > 0.0 && zone.vertices.isNotEmpty()) {
-                        val proj = EnuProjection(zone.vertices.first())
-                        val vecs = zone.vertices.map { proj.toEnu(it) }
-                        val rectangles = Geometry2D.segmentBuffers(vecs, zone.bufferM)
-                        for (rectangle in rectangles) {
-                            val rectRing = rectangle.map { corner ->
-                                val latLon = proj.fromEnu(corner)
-                                Point.fromLngLat(latLon.lon, latLon.lat)
-                            }
-                            val bufferFeature = Feature.fromGeometry(Polygon.fromLngLats(listOf(rectRing)))
-                            bufferFeature.addNumberProperty("zoneId", zone.id)
-                            bufferFeature.addStringProperty("name", zone.name)
-                            lineBufferFeatures.add(bufferFeature)
-                        }
-                        // Per-segment rectangles leave a wedge-shaped gap on the reflex side of a
-                        // bend (and an endpoint isn't capped at all); a disc at every vertex closes
-                        // that gap so the rendered corridor matches FanCalculator's actual
-                        // distance-to-segment blocking, which already covers points near a vertex.
-                        for (vertex in zone.vertices) {
-                            val jointRing = Sector.circleOutline(vertex, zone.bufferM).map { p ->
-                                Point.fromLngLat(p.lon, p.lat)
-                            }
-                            val closedJointRing = if (jointRing.isNotEmpty() && jointRing.first() != jointRing.last()) {
-                                jointRing + jointRing.first()
-                            } else {
-                                jointRing
-                            }
-                            val jointFeature = Feature.fromGeometry(Polygon.fromLngLats(listOf(closedJointRing)))
-                            jointFeature.addNumberProperty("zoneId", zone.id)
-                            jointFeature.addStringProperty("name", zone.name)
-                            lineBufferFeatures.add(jointFeature)
-                        }
+                        val refLatRad = Math.toRadians(zone.vertices.first().lat)
+                        val pixelsPerMeterAtZoom0 = 1.0 / (EARTH_MERCATOR_METERS_PER_PIXEL_AT_ZOOM0 * cos(refLatRad))
+                        val widthAtZoom0 = zone.bufferM * 2.0 * pixelsPerMeterAtZoom0
+                        lineFeature.addNumberProperty("bufferPxZ0", widthAtZoom0)
+                        lineFeature.addNumberProperty("bufferPxZ20", widthAtZoom0 * 2.0.pow(20))
+                    } else {
+                        lineFeature.addNumberProperty("bufferPxZ0", 0.0)
+                        lineFeature.addNumberProperty("bufferPxZ20", 0.0)
                     }
+                    lineFeatures.add(lineFeature)
                 }
             }
         }
@@ -389,8 +395,6 @@ class MapController(private val context: Context) {
             ?.setGeoJson(FeatureCollection.fromFeatures(markerPointFeatures))
         style.getSourceAs<GeoJsonSource>("zones-lines")
             ?.setGeoJson(FeatureCollection.fromFeatures(lineFeatures))
-        style.getSourceAs<GeoJsonSource>("zones-lines-buffer")
-            ?.setGeoJson(FeatureCollection.fromFeatures(lineBufferFeatures))
     }
 
     fun setOnLongPress(listener: (LatLon) -> Unit) {
