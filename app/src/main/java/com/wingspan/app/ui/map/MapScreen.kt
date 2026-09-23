@@ -127,6 +127,13 @@ fun MapScreen(
         } else {
             permissionLauncher.launch(arrayOf(ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION))
         }
+        // The map's camera lives only in this composable's MapController/native map view, not in
+        // MapViewModel, so it resets to the map's default view whenever this screen is torn down
+        // and recreated - e.g. returning from Settings, or resuming the app. If a shooter position
+        // is already known (GPS kept updating in the ViewModel the whole time), jump straight back
+        // to it instead of waiting for a fresh fix; a truly first-ever fix is still handled by
+        // onLocationPermissionResult's own one-time centering above.
+        viewModel.recenter()
     }
 
     LaunchedEffect(Unit) {
