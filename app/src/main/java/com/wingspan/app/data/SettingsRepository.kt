@@ -29,6 +29,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val CHOKE = stringPreferencesKey("choke")
         val ENERGY_THRESHOLD_FTLBF = doublePreferencesKey("energy_threshold_ftlbf")
         val UNIT_SYSTEM = stringPreferencesKey("unit_system")
+        val WIND_SPEED_MPH = doublePreferencesKey("wind_speed_mph")
         val BASEMAP = stringPreferencesKey("basemap")
     }
 
@@ -47,6 +48,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             energyThresholdFtLbf = prefs[Keys.ENERGY_THRESHOLD_FTLBF] ?: defaults.energyThresholdFtLbf,
             unitSystem = prefs[Keys.UNIT_SYSTEM]?.let { runCatching { enumValueOf<UnitSystem>(it) }.getOrNull() }
                 ?: defaults.unitSystem,
+            windSpeedMph = prefs[Keys.WIND_SPEED_MPH] ?: defaults.windSpeedMph,
         )
     }
 
@@ -62,6 +64,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[Keys.CHOKE] = updated.choke.name
             prefs[Keys.ENERGY_THRESHOLD_FTLBF] = updated.energyThresholdFtLbf
             prefs[Keys.UNIT_SYSTEM] = updated.unitSystem.name
+            prefs[Keys.WIND_SPEED_MPH] = updated.windSpeedMph
         }
     }
 

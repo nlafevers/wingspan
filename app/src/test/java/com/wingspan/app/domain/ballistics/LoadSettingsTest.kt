@@ -29,4 +29,21 @@ class LoadSettingsTest {
 
         assertEquals(original, decoded)
     }
+
+    @Test
+    fun `default wind speed is zero mph`() {
+        assertEquals(0.0, LoadSettings().windSpeedMph, 0.0)
+    }
+
+    @Test
+    fun `default wind speed maps to zero mps`() {
+        assertEquals(0.0, LoadSettings().toBallisticInput().windSpeedMps, 0.0)
+    }
+
+    @Test
+    fun `wind speed converts mph to mps`() {
+        val input = LoadSettings(windSpeedMph = 20.0).toBallisticInput()
+
+        assertEquals(8.9408, input.windSpeedMps, 1e-6)
+    }
 }

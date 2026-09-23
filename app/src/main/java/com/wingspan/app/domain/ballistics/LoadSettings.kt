@@ -14,6 +14,7 @@ data class LoadSettings(
     val choke: Choke = Choke.MODIFIED,
     val energyThresholdFtLbf: Double = 1.5,
     val unitSystem: UnitSystem = UnitSystem.IMPERIAL,
+    val windSpeedMph: Double = 0.0,
 ) {
     fun effectiveDiameterInches(): Double =
         if (shotSize == ShotSize.CUSTOM) customDiameterInches else shotSize.diameterInches
@@ -28,5 +29,6 @@ data class LoadSettings(
             muzzleVelocityFps = muzzleVelocityFps,
             choke = choke,
             energyThresholdFtLbf = energyThresholdFtLbf,
+            windSpeedMps = Units.mphToMps(windSpeedMph),
         )
 }
