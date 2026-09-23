@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -72,6 +73,8 @@ fun MapScreen(
     val zones by viewModel.zones.collectAsStateWithLifecycle()
     val fanState by viewModel.fanState.collectAsStateWithLifecycle()
     val selectedFanIndex by viewModel.selectedFanIndex.collectAsStateWithLifecycle()
+    var showFanDetail by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedFanIndex) { showFanDetail = false }
 
     val editorViewModel: EditorViewModel = viewModel(
         factory = EditorViewModel.factory(context.appContainer())
@@ -330,11 +333,27 @@ fun MapScreen(
 
         val selectedFanView = currentFanState?.fans?.getOrNull(selectedFanIndex ?: -1)
         if (currentFanState != null && selectedFanView != null) {
-            FanDetailSheet(
-                state = currentFanState,
-                fan = selectedFanView,
-                onDismiss = { viewModel.selectFan(null) },
-            )
+            if (showFanDetail) {
+                FanDetailSheet(
+                    state = currentFanState,
+                    fan = selectedFanView,
+                    onDismiss = { showFanDetail = false },
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    tonalElevation = 4.dp,
+                ) {
+                    Row(modifier = Modifier.padding(8.dp)) {
+                        TextButton(onClick = { viewModel.selectFan(null) }) {
+                            Text("Clear")
+                        }
+                        Button(onClick = { showFanDetail = true }) {
+                            Text("Info")
+                        }
+                    }
+                }
+            }
         }
 
         val currentSelectedZone = selectedZone
