@@ -114,19 +114,20 @@ fun SettingsScreen(
     val velocitySuffix = if (units == UnitSystem.IMPERIAL) "fps" else "m/s"
     val windSuffix = if (units == UnitSystem.IMPERIAL) "mph" else "m/s"
 
-    var diameterText by remember(settings.customDiameterInches) {
-        mutableStateOf(settings.customDiameterInches.toString())
-    }
-    var densityText by remember(settings.customDensityGcc) {
-        mutableStateOf(settings.customDensityGcc.toString())
-    }
-    var velocityText by remember(settings.muzzleVelocityFps, units) {
+    // Keyed only on what should force a resync from outside (nothing for the three below - they
+    // have no unit-dependent display; `units` for the two below that do). Deliberately NOT keyed
+    // on the field's own settings value: since onValueChange pushes every valid keystroke straight
+    // to the ViewModel, keying on that value here would reset this text to the round-tripped
+    // Double.toString() on every keystroke, fighting whatever the user is currently typing (e.g.
+    // clearing "5.0" one character at a time would keep "helpfully" reformatting back to "5.0"/
+    // "0.0" mid-edit instead of actually going empty).
+    var diameterText by remember { mutableStateOf(settings.customDiameterInches.toString()) }
+    var densityText by remember { mutableStateOf(settings.customDensityGcc.toString()) }
+    var velocityText by remember(units) {
         mutableStateOf(Formatters.fpsToVelocityInput(settings.muzzleVelocityFps, units))
     }
-    var energyThresholdText by remember(settings.energyThresholdFtLbf) {
-        mutableStateOf(settings.energyThresholdFtLbf.toString())
-    }
-    var windText by remember(settings.windSpeedMph, units) {
+    var energyThresholdText by remember { mutableStateOf(settings.energyThresholdFtLbf.toString()) }
+    var windText by remember(units) {
         mutableStateOf(Formatters.mphToWindInput(settings.windSpeedMph, units))
     }
 
@@ -162,7 +163,11 @@ fun SettingsScreen(
                     value = diameterText,
                     onValueChange = { text ->
                         diameterText = text
-                        text.toDoubleOrNull()?.let { viewModel.setCustomDiameterInches(it) }
+                        // Pellet requires a strictly positive diameter; "0", "0.", or "0.0" are
+                        // valid Doubles that parse cleanly while backspacing a value toward empty,
+                        // and pushing that zero through crashes the reactive range preview (and
+                        // persists a value that crashes on every subsequent launch too).
+                        text.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { viewModel.setCustomDiameterInches(it) }
                     },
                 )
             }
@@ -181,7 +186,8 @@ fun SettingsScreen(
                     value = densityText,
                     onValueChange = { text ->
                         densityText = text
-                        text.toDoubleOrNull()?.let { viewModel.setCustomDensityGcc(it) }
+                        // Same zero-during-backspace hazard as diameter above.
+                        text.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { viewModel.setCustomDensityGcc(it) }
                     },
                 )
             }
