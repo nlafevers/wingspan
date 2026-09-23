@@ -196,19 +196,34 @@ fun MapScreen(
                     )
                 }
             }
-            if (currentFanState != null) {
-                val windPart = if (currentFanState.range.windBufferM > 0) {
-                    " · Wind +${Formatters.distance(currentFanState.range.windBufferM, currentFanState.units)}"
-                } else {
-                    ""
-                }
-                Surface(modifier = Modifier.padding(top = 4.dp)) {
-                    Text(
-                        "Max ${Formatters.distance(currentFanState.range.maxRangeM, currentFanState.units)} · " +
-                            "Eff ${Formatters.distance(currentFanState.range.effectiveRangeM, currentFanState.units)}" +
-                            windPart,
-                        modifier = Modifier.padding(4.dp),
-                    )
+            if (manualMode || currentFanState != null) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (manualMode) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            modifier = Modifier.padding(end = 4.dp),
+                        ) {
+                            Text("Long-press to move", modifier = Modifier.padding(4.dp))
+                        }
+                    }
+                    if (currentFanState != null) {
+                        val windPart = if (currentFanState.range.windBufferM > 0) {
+                            " · Wind +${Formatters.distance(currentFanState.range.windBufferM, currentFanState.units)}"
+                        } else {
+                            ""
+                        }
+                        Surface {
+                            Text(
+                                "Max ${Formatters.distance(currentFanState.range.maxRangeM, currentFanState.units)} · " +
+                                    "Eff ${Formatters.distance(currentFanState.range.effectiveRangeM, currentFanState.units)}" +
+                                    windPart,
+                                modifier = Modifier.padding(4.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -217,11 +232,6 @@ fun MapScreen(
                 .padding(top = 64.dp, start = 8.dp, end = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (manualMode) {
-                Surface(color = MaterialTheme.colorScheme.tertiaryContainer) {
-                    Text("MANUAL POSITION — long-press map to move", modifier = Modifier.padding(8.dp))
-                }
-            }
             if (currentFanState != null && currentFanState.insideZone) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
