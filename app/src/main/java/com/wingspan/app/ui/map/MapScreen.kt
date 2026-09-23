@@ -165,6 +165,12 @@ fun MapScreen(
             ) {
                 Icon(Icons.Default.Edit, contentDescription = "Manual position")
             }
+            SmallFloatingActionButton(
+                onClick = { viewModel.recenter() },
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Icon(Icons.Default.Place, contentDescription = "Recenter")
+            }
         }
 
         if (editorMode !is EditorViewModel.EditorMode.Idle) {
