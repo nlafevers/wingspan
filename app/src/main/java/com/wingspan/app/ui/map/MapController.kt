@@ -79,6 +79,8 @@ class MapController(private val context: Context) {
     private var downX: Float = 0f
     private var downY: Float = 0f
     private var moved: Boolean = false
+    private var pendingCameraTarget: LatLon? = null
+    private var pendingCameraZoom: Double? = null
 
     interface HandleDragListener {
         fun onHandleMoved(index: Int, p: LatLon)
@@ -124,6 +126,11 @@ class MapController(private val context: Context) {
         if (basemap != null) {
             loadStyle()
         }
+        // A camera move requested before this map view finished attaching (native MapView/
+        // getMapAsync setup is asynchronous) would otherwise be silently dropped: animateCamera()
+        // no-ops while `map` is null, and the request isn't re-delivered once it's set. Re-apply
+        // whatever was last requested now that a map actually exists to move.
+        pendingCameraTarget?.let { animateCamera(it, pendingCameraZoom) }
     }
 
     fun setBasemap(b: Basemap) {
@@ -314,6 +321,8 @@ class MapController(private val context: Context) {
     }
 
     fun animateCamera(target: LatLon, zoom: Double? = null) {
+        pendingCameraTarget = target
+        pendingCameraZoom = zoom
         val latLng = LatLng(target.lat, target.lon)
         val update = if (zoom != null) {
             CameraUpdateFactory.newLatLngZoom(latLng, zoom)
