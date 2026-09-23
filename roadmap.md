@@ -772,7 +772,7 @@ Goal: a wind speed setting produces a safety buffer that lengthens the fans and 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build passes and `LoadSettingsTest` passes.
 
-- [ ] **WS-6.3** Apply the wind buffer to no-fire zones in the fan calculator
+- [x] **WS-6.3** Apply the wind buffer to no-fire zones in the fan calculator (Commit: PENDING)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/geo/FanCalculator.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/main/java/com/wingspan/app/domain/geo/Zones.kt, app/src/test/java/com/wingspan/app/domain/geo/FanCalculatorTest.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/geo/FanCalculator.kt, app/src/test/java/com/wingspan/app/domain/geo/FanCalculatorTest.kt

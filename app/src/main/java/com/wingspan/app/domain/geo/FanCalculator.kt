@@ -26,6 +26,7 @@ object FanCalculator {
         stepDeg: Double = 1.0,
         marginDeg: Double = 2.0,
         minFanDeg: Double = 5.0,
+        windBufferM: Double = 0.0,
     ): FanResult {
         val proj = EnuProjection(origin)
         val polygons = zones.filterIsInstance<NoFirePolygon>().map { polygon ->
@@ -41,7 +42,15 @@ object FanCalculator {
         val originVec = Vec2(0.0, 0.0)
 
         val insideZone = polygons.any { Geometry2D.pointInPolygon(originVec, it) } ||
-            markers.any { (center, radiusM) -> (originVec - center).length < radiusM }
+            (windBufferM > 0.0 && polygons.any { polygon ->
+                val size = polygon.size
+                polygon.indices.any { j ->
+                    val a = polygon[j]
+                    val b = polygon[(j + 1) % size]
+                    Geometry2D.distancePointToSegment(originVec, a, b) <= windBufferM
+                }
+            }) ||
+            markers.any { (center, radiusM) -> (originVec - center).length < radiusM + windBufferM }
 
         if (insideZone) {
             return FanResult(fans = emptyList(), insideZone = true, blockedBearings = 360)
@@ -61,7 +70,9 @@ object FanCalculator {
                 for (j in polygon.indices) {
                     val a = polygon[j]
                     val b = polygon[(j + 1) % size]
-                    if (Geometry2D.segmentsIntersect(originVec, end, a, b)) {
+                    if (Geometry2D.segmentsIntersect(originVec, end, a, b) ||
+                        (windBufferM > 0.0 && Geometry2D.distanceSegmentToSegment(originVec, end, a, b) <= windBufferM)
+                    ) {
                         isBlocked = true
                         break@outer
                     }
@@ -70,7 +81,7 @@ object FanCalculator {
 
             if (!isBlocked) {
                 for ((center, radiusM) in markers) {
-                    if (Geometry2D.distancePointToSegment(center, originVec, end) < radiusM) {
+                    if (Geometry2D.distancePointToSegment(center, originVec, end) < radiusM + windBufferM) {
                         isBlocked = true
                         break
                     }
@@ -82,7 +93,7 @@ object FanCalculator {
                     for (j in 0 until lineVertices.size - 1) {
                         val segStart = lineVertices[j]
                         val segEnd = lineVertices[j + 1]
-                        if (Geometry2D.distanceSegmentToSegment(originVec, end, segStart, segEnd) <= bufferM) {
+                        if (Geometry2D.distanceSegmentToSegment(originVec, end, segStart, segEnd) <= bufferM + windBufferM) {
                             isBlocked = true
                             break@outerLines
                         }

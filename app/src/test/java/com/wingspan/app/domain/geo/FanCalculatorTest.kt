@@ -177,4 +177,91 @@ class FanCalculatorTest {
             bufferedResult.blockedBearings > zeroResult.blockedBearings,
         )
     }
+
+    @Test
+    fun windBufferWidensPolygonBlocking() {
+        val square = NoFirePolygon(
+            id = 1,
+            name = "square",
+            vertices = listOf(
+                p(-50.0, 150.0),
+                p(50.0, 150.0),
+                p(50.0, 250.0),
+                p(-50.0, 250.0),
+            ),
+        )
+
+        val noBufferResult = FanCalculator.compute(
+            origin,
+            maxRangeM = 300.0,
+            zones = listOf(square),
+            windBufferM = 0.0,
+        )
+        val withBufferResult = FanCalculator.compute(
+            origin,
+            maxRangeM = 300.0,
+            zones = listOf(square),
+            windBufferM = 40.0,
+        )
+
+        assertTrue(
+            "windBufferM blockedBearings ${withBufferResult.blockedBearings} should exceed " +
+                "no-buffer blockedBearings ${noBufferResult.blockedBearings}",
+            withBufferResult.blockedBearings > noBufferResult.blockedBearings,
+        )
+    }
+
+    @Test
+    fun windBufferWidensMarkerBlocking() {
+        val marker = NoFireMarker(id = 1, name = "marker", center = p(0.0, 200.0), radiusM = 10.0)
+
+        val noBufferResult = FanCalculator.compute(
+            origin,
+            maxRangeM = 300.0,
+            zones = listOf(marker),
+            windBufferM = 0.0,
+        )
+        val withBufferResult = FanCalculator.compute(
+            origin,
+            maxRangeM = 300.0,
+            zones = listOf(marker),
+            windBufferM = 50.0,
+        )
+
+        assertTrue(
+            "windBufferM blockedBearings ${withBufferResult.blockedBearings} should exceed " +
+                "no-buffer blockedBearings ${noBufferResult.blockedBearings}",
+            withBufferResult.blockedBearings > noBufferResult.blockedBearings,
+        )
+    }
+
+    @Test
+    fun windBufferMakesNearbyPolygonInsideZone() {
+        val square = NoFirePolygon(
+            id = 1,
+            name = "square",
+            vertices = listOf(
+                p(-50.0, 20.0),
+                p(50.0, 20.0),
+                p(50.0, 120.0),
+                p(-50.0, 120.0),
+            ),
+        )
+
+        val noBufferResult = FanCalculator.compute(
+            origin,
+            maxRangeM = 300.0,
+            zones = listOf(square),
+            windBufferM = 0.0,
+        )
+        val withBufferResult = FanCalculator.compute(
+            origin,
+            maxRangeM = 300.0,
+            zones = listOf(square),
+            windBufferM = 30.0,
+        )
+
+        assertFalse(noBufferResult.insideZone)
+        assertTrue(withBufferResult.insideZone)
+    }
 }
