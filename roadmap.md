@@ -826,7 +826,7 @@ Goal: a wind speed setting produces a safety buffer that lengthens the fans and 
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds and `MapViewModel` compiles with `fanState` exposed.
 
-- [ ] **WS-6.7** Draw the fans and show fan limits on tap
+- [x] **WS-6.7** Draw the fans and show fan limits on tap (Commit: 8ac26b2)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt, app/src/main/java/com/wingspan/app/ui/Formatters.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/map/FanDetailSheet.kt
