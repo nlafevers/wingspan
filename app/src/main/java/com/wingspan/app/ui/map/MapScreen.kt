@@ -200,7 +200,8 @@ fun MapScreen(
             }
         }
         Column(
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(8.dp),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
+                .padding(top = 64.dp, start = 8.dp, end = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (manualMode) {
