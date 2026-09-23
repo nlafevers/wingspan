@@ -712,7 +712,7 @@ Goal: users can draw no-fire polygons and markers by tapping, refine them by dra
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: tapping adds vertices with handles; dragging a handle moves it without panning the map; pressing a midpoint inserts a vertex; Finish saves and the zone renders in red (a line as a red line, with a translucent corridor when a buffer is set).
 
-- [ ] **WS-5.3** Select, edit, rename, and delete existing zones
+- [x] **WS-5.3** Select, edit, rename, and delete existing zones (Commit: d094005)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/editor/ZoneDialogs.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorViewModel.kt, app/src/main/java/com/wingspan/app/ui/editor/ZoneDialogs.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
