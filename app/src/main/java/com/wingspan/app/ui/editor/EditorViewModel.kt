@@ -12,6 +12,7 @@ import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
+import com.wingspan.app.ui.map.TapHit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +50,8 @@ class EditorViewModel(private val zoneRepository: ZoneRepository) : ViewModel() 
 
     val mode = MutableStateFlow<EditorMode>(EditorMode.Idle)
     val showNameDialog = MutableStateFlow(false)
+    val selectedZone = MutableStateFlow<NoFireZone?>(null)
+    val showRenameDialog = MutableStateFlow(false)
 
     val render: StateFlow<EditorRender?> = mode.map { m ->
         when (m) {
@@ -108,6 +111,54 @@ class EditorViewModel(private val zoneRepository: ZoneRepository) : ViewModel() 
                 bufferM = zone.bufferM,
             )
         }
+    }
+
+    fun onTap(hit: TapHit, zones: List<NoFireZone>) {
+        val currentMode = mode.value
+        if (currentMode is EditorMode.Idle) {
+            if (hit.zoneId != null) {
+                selectedZone.value = zones.firstOrNull { zoneId(it) == hit.zoneId }
+            }
+        } else {
+            onMapTap(hit.position)
+        }
+    }
+
+    fun clearSelection() {
+        selectedZone.value = null
+    }
+
+    fun editSelectedShape() {
+        val zone = selectedZone.value ?: return
+        editZone(zone)
+        selectedZone.value = null
+    }
+
+    fun renameSelected(name: String) {
+        val zone = selectedZone.value ?: return
+        viewModelScope.launch {
+            when (zone) {
+                is NoFirePolygon -> zoneRepository.updatePolygon(zone.id, name, zone.vertices)
+                is NoFireMarker -> zoneRepository.updateMarker(zone.id, name, zone.center, zone.radiusM)
+                is NoFireLine -> zoneRepository.updateLine(zone.id, name, zone.vertices, zone.bufferM)
+            }
+            showRenameDialog.value = false
+            selectedZone.value = null
+        }
+    }
+
+    fun deleteSelected() {
+        val zone = selectedZone.value ?: return
+        viewModelScope.launch {
+            zoneRepository.delete(zoneId(zone))
+            selectedZone.value = null
+        }
+    }
+
+    private fun zoneId(zone: NoFireZone): Long = when (zone) {
+        is NoFirePolygon -> zone.id
+        is NoFireMarker -> zone.id
+        is NoFireLine -> zone.id
     }
 
     fun onMapTap(p: LatLon) {

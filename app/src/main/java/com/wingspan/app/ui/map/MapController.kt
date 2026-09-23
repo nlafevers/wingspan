@@ -40,6 +40,11 @@ import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
 
 /**
+ * The result of a tap on the map: where it landed, and the zone (if any) hit there.
+ */
+data class TapHit(val position: LatLon, val zoneId: Long?)
+
+/**
  * The only place in the app that talks to MapLibre directly.
  */
 class MapController(private val context: Context) {
@@ -50,7 +55,7 @@ class MapController(private val context: Context) {
     private var shooter: ShooterPosition? = null
     private var zones: List<NoFireZone> = emptyList()
     private var onLongPress: ((LatLon) -> Unit)? = null
-    private var onTap: ((LatLon) -> Unit)? = null
+    private var onTap: ((TapHit) -> Unit)? = null
     private var handleDragListener: HandleDragListener? = null
     private var editorRender: EditorRender? = null
     private var dragIndex: Int? = null
@@ -76,7 +81,18 @@ class MapController(private val context: Context) {
             true
         }
         map.addOnMapClickListener {
-            onTap?.invoke(LatLon(it.latitude, it.longitude))
+            val position = LatLon(it.latitude, it.longitude)
+            val screenPoint = map.projection.toScreenLocation(it)
+            val features = map.queryRenderedFeatures(
+                screenPoint,
+                "zones-marker-points",
+                "zones-marker-circles-fill",
+                "zones-polygons-fill",
+                "zones-lines-outline",
+                "zones-lines-buffer-fill",
+            )
+            val zoneId = features.firstOrNull()?.getNumberProperty("zoneId")?.toLong()
+            onTap?.invoke(TapHit(position, zoneId))
             true
         }
         mapView.setOnTouchListener { _, ev -> handleTouch(ev) }
@@ -362,7 +378,7 @@ class MapController(private val context: Context) {
         onLongPress = listener
     }
 
-    fun setOnTap(listener: (LatLon) -> Unit) {
+    fun setOnTap(listener: (TapHit) -> Unit) {
         onTap = listener
     }
 

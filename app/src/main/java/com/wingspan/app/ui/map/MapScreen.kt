@@ -41,7 +41,11 @@ import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.ui.editor.EditorControls
 import com.wingspan.app.ui.editor.EditorViewModel
+import com.wingspan.app.ui.editor.ZoneInfoSheet
 import com.wingspan.app.ui.editor.ZoneNameDialog
+import com.wingspan.app.domain.geo.NoFireLine
+import com.wingspan.app.domain.geo.NoFireMarker
+import com.wingspan.app.domain.geo.NoFirePolygon
 
 @Composable
 fun MapScreen(
@@ -61,6 +65,8 @@ fun MapScreen(
     val editorRender by editorViewModel.render.collectAsStateWithLifecycle()
     val canFinishEditor by editorViewModel.canFinish.collectAsStateWithLifecycle()
     val showNameDialog by editorViewModel.showNameDialog.collectAsStateWithLifecycle()
+    val selectedZone by editorViewModel.selectedZone.collectAsStateWithLifecycle()
+    val showRenameDialog by editorViewModel.showRenameDialog.collectAsStateWithLifecycle()
     var addMenuExpanded by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -84,7 +90,7 @@ fun MapScreen(
     LaunchedEffect(controller) { controller.setOnLongPress { viewModel.setManualPosition(it) } }
     LaunchedEffect(editorRender) { controller.setEditorRender(editorRender) }
     LaunchedEffect(controller) {
-        controller.setOnTap { editorViewModel.onMapTap(it) }
+        controller.setOnTap { hit -> editorViewModel.onTap(hit, zones) }
         controller.setHandleDragListener(object : MapController.HandleDragListener {
             override fun onHandleMoved(index: Int, p: LatLon) {
                 editorViewModel.moveVertex(index, p)
@@ -217,6 +223,31 @@ fun MapScreen(
                 radiusLabel = radiusLabel,
                 onConfirm = { name, radius -> editorViewModel.confirmFinish(name, radius) },
                 onDismiss = { editorViewModel.dismissNameDialog() },
+            )
+        }
+
+        val currentSelectedZone = selectedZone
+        if (currentSelectedZone != null) {
+            ZoneInfoSheet(
+                zone = currentSelectedZone,
+                onEditShape = { editorViewModel.editSelectedShape() },
+                onRename = { editorViewModel.showRenameDialog.value = true },
+                onDelete = { editorViewModel.deleteSelected() },
+                onDismiss = { editorViewModel.clearSelection() },
+            )
+        }
+
+        if (showRenameDialog && currentSelectedZone != null) {
+            val currentName = when (currentSelectedZone) {
+                is NoFirePolygon -> currentSelectedZone.name
+                is NoFireMarker -> currentSelectedZone.name
+                is NoFireLine -> currentSelectedZone.name
+            }
+            ZoneNameDialog(
+                initialName = currentName,
+                initialRadiusM = null,
+                onConfirm = { name, _ -> editorViewModel.renameSelected(name) },
+                onDismiss = { editorViewModel.showRenameDialog.value = false },
             )
         }
     }
