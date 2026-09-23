@@ -96,7 +96,9 @@ fun EditorControls(
                     }
                     else -> Unit
                 }
+            }
 
+            Row(modifier = Modifier.padding(top = 8.dp)) {
                 TextButton(onClick = onCancel) {
                     Text("Cancel")
                 }
