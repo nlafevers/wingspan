@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -460,7 +461,8 @@ private fun BearingLabel(x: Float, y: Float, text: String) {
     val halfWidthPx = with(density) { 22.dp.toPx() }
     val halfHeightPx = with(density) { 10.dp.toPx() }
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+        color = Color.White.copy(alpha = 0.25f),
+        contentColor = Color.Black,
         modifier = Modifier.offset {
             IntOffset((x - halfWidthPx).roundToInt(), (y - halfHeightPx).roundToInt())
         },
