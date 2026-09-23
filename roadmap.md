@@ -724,7 +724,7 @@ Goal: users can draw no-fire polygons and markers by tapping, refine them by dra
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: tapping a zone (including a line) opens the sheet; Edit shape shows draggable handles and Finish updates the zone; Rename and Delete work.
 
-- [ ] **WS-5.4** Import and export zones as GeoJSON through the system file picker
+- [x] **WS-5.4** Import and export zones as GeoJSON through the system file picker (Commit: 1561af6)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/geojson/GeoJsonCodec.kt, app/src/main/java/com/wingspan/app/data/ZoneRepository.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/editor/ZoneFileIo.kt, app/src/main/java/com/wingspan/app/ui/editor/EditorViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/map/MapMenu.kt
