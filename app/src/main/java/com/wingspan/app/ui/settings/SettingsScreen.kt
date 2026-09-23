@@ -41,9 +41,6 @@ import com.wingspan.app.domain.ballistics.ShotSize
 import com.wingspan.app.domain.ballistics.UnitSystem
 import com.wingspan.app.ui.Formatters
 
-private fun <T : Enum<T>> enumLabel(value: T): String =
-    value.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun <T> EnumDropdown(
@@ -155,7 +152,7 @@ fun SettingsScreen(
                 label = "Shot size",
                 options = ShotSize.values().toList(),
                 selected = settings.shotSize,
-                labelOf = ::enumLabel,
+                labelOf = ShotSize::label,
                 onSelect = viewModel::setShotSize,
             )
 
@@ -174,7 +171,7 @@ fun SettingsScreen(
                 label = "Pellet material",
                 options = PelletMaterial.values().toList(),
                 selected = settings.material,
-                labelOf = ::enumLabel,
+                labelOf = PelletMaterial::label,
                 onSelect = viewModel::setMaterial,
             )
 
@@ -193,7 +190,7 @@ fun SettingsScreen(
                 label = "Choke",
                 options = Choke.values().toList(),
                 selected = settings.choke,
-                labelOf = ::enumLabel,
+                labelOf = Choke::label,
                 onSelect = viewModel::setChoke,
             )
 
