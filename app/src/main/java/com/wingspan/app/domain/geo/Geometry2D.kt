@@ -95,24 +95,4 @@ object Geometry2D {
         )
     }
 
-    fun segmentBuffers(points: List<Vec2>, halfWidth: Double): List<List<Vec2>> {
-        if (halfWidth <= 0.0 || points.size < 2) return emptyList()
-        val result = mutableListOf<List<Vec2>>()
-        for (i in 0 until points.size - 1) {
-            val p1 = points[i]
-            val p2 = points[i + 1]
-            val d = (p2 - p1) * (1.0 / (p2 - p1).length)
-            val n = Vec2(-d.y, d.x) * halfWidth
-            result.add(
-                listOf(
-                    p1 + n,
-                    p2 + n,
-                    p2 - n,
-                    p1 - n,
-                    p1 + n,
-                ),
-            )
-        }
-        return result
-    }
 }
