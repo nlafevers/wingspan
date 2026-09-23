@@ -2,6 +2,7 @@ package com.wingspan.app.ui.map
 
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -23,11 +25,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,22 +40,27 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wingspan.app.appContainer
+import com.wingspan.app.data.geojson.GeoJsonCodec
 import com.wingspan.app.data.location.LocationProvider
 import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.ui.editor.EditorControls
 import com.wingspan.app.ui.editor.EditorViewModel
+import com.wingspan.app.ui.editor.ZoneFileIo
 import com.wingspan.app.ui.editor.ZoneInfoSheet
 import com.wingspan.app.ui.editor.ZoneNameDialog
 import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
+import kotlinx.coroutines.launch
 
 @Composable
 fun MapScreen(
     viewModel: MapViewModel = viewModel(factory = MapViewModel.factory(LocalContext.current.appContainer()))
 ) {
     val context = LocalContext.current
+    val resolver = context.contentResolver
+    val scope = rememberCoroutineScope()
     val controller = remember { MapController(context.applicationContext) }
     val basemap by viewModel.basemap.collectAsStateWithLifecycle()
     val shooter by viewModel.shooter.collectAsStateWithLifecycle()
@@ -67,11 +76,37 @@ fun MapScreen(
     val showNameDialog by editorViewModel.showNameDialog.collectAsStateWithLifecycle()
     val selectedZone by editorViewModel.selectedZone.collectAsStateWithLifecycle()
     val showRenameDialog by editorViewModel.showRenameDialog.collectAsStateWithLifecycle()
+    val pendingImport by editorViewModel.pendingImport.collectAsStateWithLifecycle()
     var addMenuExpanded by remember { mutableStateOf(false) }
+
+    fun toast(text: String) {
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result -> viewModel.onLocationPermissionResult(result.values.any { it }) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/geo+json")
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                ZoneFileIo.writeText(resolver, it, editorViewModel.exportGeoJson())
+                toast("Zones exported")
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                editorViewModel.pendingImport.value = ZoneFileIo.readText(resolver, it)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (LocationProvider.hasPermission(context)) {
@@ -79,6 +114,10 @@ fun MapScreen(
         } else {
             permissionLauncher.launch(arrayOf(ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION))
         }
+    }
+
+    LaunchedEffect(Unit) {
+        editorViewModel.message.collect { toast(it) }
     }
 
     LaunchedEffect(basemap) { controller.setBasemap(basemap) }
@@ -106,6 +145,15 @@ fun MapScreen(
 
     Box(Modifier.fillMaxSize()) {
         MapLibreView(controller, Modifier.fillMaxSize())
+        Box(Modifier.align(Alignment.TopStart).padding(8.dp)) {
+            MapMenu(
+                onSettings = {},
+                onOffline = {},
+                onSnapshots = {},
+                onExportZones = { exportLauncher.launch(ZoneFileIo.suggestedExportName()) },
+                onImportZones = { importLauncher.launch(arrayOf("*/*")) },
+            )
+        }
         Row(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(8.dp)) {
             Basemap.entries.forEach {
                 FilterChip(
@@ -249,6 +297,50 @@ fun MapScreen(
                 onConfirm = { name, _ -> editorViewModel.renameSelected(name) },
                 onDismiss = { editorViewModel.showRenameDialog.value = false },
             )
+        }
+
+        val importText = pendingImport
+        if (importText != null) {
+            val decodedCount = remember(importText) {
+                runCatching { GeoJsonCodec.decode(importText).size }.getOrNull()
+            }
+            if (decodedCount == null) {
+                LaunchedEffect(importText) {
+                    toast("Not a valid GeoJSON file")
+                    editorViewModel.pendingImport.value = null
+                }
+            } else {
+                fun performImport(replace: Boolean) {
+                    editorViewModel.pendingImport.value = null
+                    scope.launch {
+                        try {
+                            val count = editorViewModel.importGeoJson(importText, replace)
+                            toast("Imported $count zones")
+                        } catch (e: IllegalArgumentException) {
+                            toast("Not a valid GeoJSON file")
+                        }
+                    }
+                }
+                AlertDialog(
+                    onDismissRequest = { editorViewModel.pendingImport.value = null },
+                    title = { Text("Import $decodedCount zones?") },
+                    confirmButton = {
+                        Row {
+                            TextButton(onClick = { performImport(replace = true) }) {
+                                Text("Replace all")
+                            }
+                            TextButton(onClick = { performImport(replace = false) }) {
+                                Text("Merge")
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { editorViewModel.pendingImport.value = null }) {
+                            Text("Cancel")
+                        }
+                    },
+                )
+            }
         }
     }
 }

@@ -7,12 +7,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wingspan.app.AppContainer
 import com.wingspan.app.data.ZoneRepository
+import com.wingspan.app.data.geojson.GeoJsonCodec
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.ui.map.TapHit
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +54,8 @@ class EditorViewModel(private val zoneRepository: ZoneRepository) : ViewModel() 
     val showNameDialog = MutableStateFlow(false)
     val selectedZone = MutableStateFlow<NoFireZone?>(null)
     val showRenameDialog = MutableStateFlow(false)
+    val pendingImport = MutableStateFlow<String?>(null)
+    val message = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     val render: StateFlow<EditorRender?> = mode.map { m ->
         when (m) {
@@ -316,6 +320,18 @@ class EditorViewModel(private val zoneRepository: ZoneRepository) : ViewModel() 
     private fun finish() {
         mode.value = EditorMode.Idle
         showNameDialog.value = false
+    }
+
+    suspend fun exportGeoJson(): String = GeoJsonCodec.encode(zoneRepository.getAll())
+
+    suspend fun importGeoJson(text: String, replace: Boolean): Int {
+        val zones = GeoJsonCodec.decode(text)
+        if (replace) {
+            zoneRepository.replaceAll(zones)
+        } else {
+            zoneRepository.addAll(zones)
+        }
+        return zones.size
     }
 
     companion object {
