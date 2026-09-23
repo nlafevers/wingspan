@@ -176,7 +176,7 @@ class MapController(private val context: Context) {
         style.addSource(GeoJsonSource("zones-lines"))
         style.addLayer(
             FillLayer("zones-polygons-fill", "zones-polygons")
-                .withProperties(fillColor("#D32F2F"), fillOpacity(0.30f))
+                .withProperties(fillColor("#D32F2F"), fillOpacity(0.25f))
         )
         style.addLayer(
             LineLayer("zones-polygons-outline", "zones-polygons")
@@ -199,7 +199,7 @@ class MapController(private val context: Context) {
             LineLayer("zones-lines-buffer-stroke", "zones-lines")
                 .withProperties(
                     lineColor("#D32F2F"),
-                    lineOpacity(0.30f),
+                    lineOpacity(0.25f),
                     lineCap(Property.LINE_CAP_ROUND),
                     lineJoin(Property.LINE_JOIN_ROUND),
                     lineWidth(
@@ -400,10 +400,21 @@ class MapController(private val context: Context) {
                     // 2^zoom scaling of Web Mercator) rather than an exact projected polygon; the
                     // real no-fire blocking math in FanCalculator is unaffected, since it works in
                     // real meters independently of this rendering.
+                    //
+                    // The pixel width is calibrated against MapLibre's own
+                    // Projection.getMetersPerPixelAtLatitude at the current zoom (rather than a
+                    // hand-derived Web Mercator constant, which measured visibly narrower than the
+                    // real buffer on-device - MapLibre's own tile/DPI conventions are the ground
+                    // truth here, not a manually re-derived formula). One calibration point is
+                    // enough because pixel density doubles exactly every zoom level regardless of
+                    // that convention, so the zoom-0/zoom-20 stops below are derived from it.
                     if (zone.bufferM > 0.0 && zone.vertices.isNotEmpty()) {
-                        val refLatRad = Math.toRadians(zone.vertices.first().lat)
-                        val pixelsPerMeterAtZoom0 = 1.0 / (EARTH_MERCATOR_METERS_PER_PIXEL_AT_ZOOM0 * cos(refLatRad))
-                        val widthAtZoom0 = zone.bufferM * 2.0 * pixelsPerMeterAtZoom0
+                        val refLat = zone.vertices.first().lat
+                        val nowZoom = currentZoom()
+                        val metersPerPixelNow = map?.projection?.getMetersPerPixelAtLatitude(refLat)
+                            ?: (EARTH_MERCATOR_METERS_PER_PIXEL_AT_ZOOM0 * cos(Math.toRadians(refLat)) / 2.0.pow(nowZoom))
+                        val widthNow = zone.bufferM * 2.0 / metersPerPixelNow
+                        val widthAtZoom0 = widthNow / 2.0.pow(nowZoom)
                         lineFeature.addNumberProperty("bufferPxZ0", widthAtZoom0)
                         lineFeature.addNumberProperty("bufferPxZ20", widthAtZoom0 * 2.0.pow(20))
                     } else {
