@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.wingspan.app.ui.map.MapScreen
+import com.wingspan.app.ui.offline.OfflineScreen
 import com.wingspan.app.ui.settings.SettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +62,7 @@ fun WingspanApp() {
             SettingsScreen(onBack = { navController.popBackStack() })
         }
         composable("offline") {
-            ComingSoonScreen(onBack = { navController.popBackStack() }, title = "Offline maps")
+            OfflineScreen(onBack = { navController.popBackStack() })
         }
         composable("snapshots") {
             ComingSoonScreen(onBack = { navController.popBackStack() }, title = "Snapshots")
