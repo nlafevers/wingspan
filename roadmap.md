@@ -849,7 +849,7 @@ Acceptance criteria for Phase 6:
 
 Goal: users can download the visible map area for a basemap over a zoom range, watch progress, and manage stored regions.
 
-- [x] **WS-7.1** Add `OfflineRepository` around MapLibre's `OfflineManager`
+- [x] **WS-7.1** Add `OfflineRepository` around MapLibre's `OfflineManager` (Commit: 6633062)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/map/Basemap.kt, app/src/main/java/com/wingspan/app/AppContainer.kt
   - **Edit:** app/src/main/java/com/wingspan/app/data/map/OfflineRepository.kt, app/src/main/java/com/wingspan/app/AppContainer.kt
