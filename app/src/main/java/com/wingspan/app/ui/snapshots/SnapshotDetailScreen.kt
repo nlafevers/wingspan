@@ -57,6 +57,7 @@ fun SnapshotDetailScreen(
         factory = SnapshotsViewModel.factory(LocalContext.current.appContainer())
     ),
 ) {
+    val context = LocalContext.current
     var snapshot by remember { mutableStateOf<FiringSnapshot?>(null) }
     var notesText by remember { mutableStateOf("") }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -158,7 +159,7 @@ fun SnapshotDetailScreen(
                     OutlinedButton(onClick = { onShowOnMap(current.id) }) {
                         Text("Show on map")
                     }
-                    OutlinedButton(onClick = { /* No-op until WS-8.3 */ }) {
+                    OutlinedButton(onClick = { SnapshotShare.share(context, current, viewModel.summaryText(current)) }) {
                         Icon(Icons.Filled.Share, contentDescription = "Share")
                         Text("Share")
                     }

@@ -959,7 +959,7 @@ Goal: capture a timestamped record plus map image of the current firing position
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: the list shows saved snapshots with thumbnails; the detail screen shows the image and fields; notes edits persist.
 
-- [ ] **WS-8.3** Share a snapshot through the Android share sheet
+- [x] **WS-8.3** Share a snapshot through the Android share sheet
   - **Repos:** wingspan
   - **Read:** app/src/main/AndroidManifest.xml, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotDetailScreen.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotsViewModel.kt
   - **Edit:** app/src/main/res/xml/file_paths.xml, app/src/main/AndroidManifest.xml, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotShare.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotDetailScreen.kt
