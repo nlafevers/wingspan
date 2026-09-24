@@ -905,7 +905,7 @@ Goal: users can download the visible map area for a basemap over a zoom range, w
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds; `LocalStyleServer` exists and compiles but nothing in the app constructs it yet.
 
-- [ ] **WS-7.5** Point offline downloads at `LocalStyleServer` instead of GitHub
+- [-] **WS-7.5** Point offline downloads at `LocalStyleServer` instead of GitHub
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/map/LocalStyleServer.kt, app/src/main/java/com/wingspan/app/data/map/Basemap.kt, app/src/main/java/com/wingspan/app/data/map/OfflineRepository.kt, app/src/main/java/com/wingspan/app/AppContainer.kt
   - **Edit:** app/src/main/java/com/wingspan/app/data/map/Basemap.kt, app/src/main/java/com/wingspan/app/data/map/OfflineRepository.kt, app/src/main/java/com/wingspan/app/AppContainer.kt

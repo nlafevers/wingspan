@@ -14,9 +14,13 @@ enum class Basemap(
     val assetPath: String
         get() = "styles/$assetFile"
 
-    /** Used only by offline downloads; MapLibre's offline downloader requires an https:// style URL. */
-    val remoteStyleUrl: String
-        get() = "https://raw.githubusercontent.com/nlafevers/wingspan/main/app/src/main/assets/styles/$assetFile"
+    /**
+     * Used only by offline downloads; MapLibre's offline downloader requires a style URL it can
+     * fetch over HTTP. This points at the in-process [LocalStyleServer] (WS-7.4) rather than
+     * GitHub. [port] must be `LocalStyleServer.port` read after the server has been started via
+     * `startServing()`.
+     */
+    fun remoteStyleUrl(port: Int): String = "http://127.0.0.1:$port/$assetPath"
 
     companion object {
         fun fromKey(key: String?): Basemap = entries.firstOrNull { it.key == key } ?: USGS_TOPO

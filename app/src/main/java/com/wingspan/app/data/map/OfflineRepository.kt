@@ -43,7 +43,7 @@ data class DownloadProgress(
     val error: String?,
 )
 
-class OfflineRepository(context: Context) {
+class OfflineRepository(context: Context, private val localStyleServer: LocalStyleServer) {
     private val manager = OfflineManager.getInstance(context)
     val activeDownloads = MutableStateFlow<Map<Long, DownloadProgress>>(emptyMap())
 
@@ -105,7 +105,7 @@ class OfflineRepository(context: Context) {
         pixelRatio: Float,
     ) {
         val definition = OfflineTilePyramidRegionDefinition(
-            basemap.remoteStyleUrl,
+            basemap.remoteStyleUrl(localStyleServer.port),
             LatLngBounds.from(north, east, south, west),
             minZoom.toDouble(),
             maxZoom.toDouble(),

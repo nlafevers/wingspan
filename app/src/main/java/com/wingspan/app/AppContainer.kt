@@ -7,6 +7,7 @@ import com.wingspan.app.data.SnapshotRepository
 import com.wingspan.app.data.ZoneRepository
 import com.wingspan.app.data.db.AppDatabase
 import com.wingspan.app.data.location.LocationProvider
+import com.wingspan.app.data.map.LocalStyleServer
 import com.wingspan.app.data.map.OfflineRepository
 import com.wingspan.app.data.settingsDataStore
 import com.wingspan.app.domain.geo.DeclinationProvider
@@ -19,5 +20,6 @@ class AppContainer(context: Context) {
     val snapshotRepository = SnapshotRepository(database.snapshotDao(), File(context.filesDir, "snapshots"))
     val locationProvider = LocationProvider(context)
     val declinationProvider: DeclinationProvider = AndroidDeclination()
-    val offlineRepository = OfflineRepository(context)
+    val localStyleServer = LocalStyleServer(context).apply { startServing() }
+    val offlineRepository = OfflineRepository(context, localStyleServer)
 }
