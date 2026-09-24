@@ -890,7 +890,7 @@ Goal: users can download the visible map area for a basemap over a zoom range, w
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: downloading the visible area shows progress on the offline screen; with airplane mode on, the downloaded area still renders at the downloaded zooms.
 
-- [-] **WS-7.4** Add a NanoHTTPD-based `LocalStyleServer` serving bundled basemap styles over loopback HTTP
+- [x] **WS-7.4** Add a NanoHTTPD-based `LocalStyleServer` serving bundled basemap styles over loopback HTTP (Commit: bcef3e3)
   - **Repos:** wingspan
   - **Read:** gradle/libs.versions.toml, app/build.gradle.kts, app/src/main/java/com/wingspan/app/data/map/Basemap.kt
   - **Edit:** gradle/libs.versions.toml, app/build.gradle.kts, app/src/main/java/com/wingspan/app/data/map/LocalStyleServer.kt
