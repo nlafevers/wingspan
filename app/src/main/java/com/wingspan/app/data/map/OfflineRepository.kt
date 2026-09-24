@@ -1,12 +1,8 @@
 package com.wingspan.app.data.map
 
 import android.content.Context
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -49,7 +45,6 @@ data class DownloadProgress(
 
 class OfflineRepository(context: Context) {
     private val manager = OfflineManager.getInstance(context)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val activeDownloads = MutableStateFlow<Map<Long, DownloadProgress>>(emptyMap())
 
     init {
