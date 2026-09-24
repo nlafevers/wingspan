@@ -867,7 +867,7 @@ Goal: users can download the visible map area for a basemap over a zoom range, w
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds.
 
-- [-] **WS-7.2** Add the offline regions screen
+- [x] **WS-7.2** Add the offline regions screen (Commit: 01a6dfd)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/map/OfflineRepository.kt, app/src/main/java/com/wingspan/app/ui/WingspanApp.kt, app/src/main/java/com/wingspan/app/ui/settings/SettingsScreen.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/offline/OfflineViewModel.kt, app/src/main/java/com/wingspan/app/ui/offline/OfflineScreen.kt, app/src/main/java/com/wingspan/app/ui/WingspanApp.kt
