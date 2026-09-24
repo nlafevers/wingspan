@@ -994,7 +994,7 @@ Goal: capture a timestamped record plus map image of the current firing position
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: "Show on map" centers the map on the snapshot position and draws its fans in amber alongside the current green fans; Close removes them.
 
-- [x] **WS-8.5** Export all snapshots as a zip bundle
+- [x] **WS-8.5** Export all snapshots as a zip bundle (Commit: 0ba1845)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/SnapshotRepository.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotsViewModel.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotsScreen.kt, app/src/main/java/com/wingspan/app/ui/editor/ZoneFileIo.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotExport.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotsViewModel.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotsScreen.kt
