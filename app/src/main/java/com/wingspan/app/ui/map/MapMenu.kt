@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 fun MapMenu(
     onSettings: () -> Unit,
     onOffline: () -> Unit,
+    onDownloadArea: () -> Unit,
     onSnapshots: () -> Unit,
     onExportZones: () -> Unit,
     onImportZones: () -> Unit,
@@ -46,6 +47,13 @@ fun MapMenu(
                 onClick = {
                     expanded = false
                     onOffline()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Download this area") },
+                onClick = {
+                    expanded = false
+                    onDownloadArea()
                 },
             )
             DropdownMenuItem(

@@ -53,6 +53,13 @@ import kotlin.math.pow
 data class TapHit(val position: LatLon, val zoneId: Long?, val fanIndex: Int?)
 
 /**
+ * The map's currently visible geographic extent, in the same south/west/north/east order used
+ * throughout the offline-download plumbing (see [com.wingspan.app.domain.geo.TileMath.tileCount]
+ * and [com.wingspan.app.data.map.OfflineRepository.startDownload]).
+ */
+data class Bounds(val south: Double, val west: Double, val north: Double, val east: Double)
+
+/**
  * The only place in the app that talks to MapLibre directly.
  */
 class MapController(private val context: Context) {
@@ -334,6 +341,17 @@ class MapController(private val context: Context) {
     }
 
     fun currentZoom(): Double = map?.cameraPosition?.zoom ?: 3.0
+
+    /** The area currently on screen, or null before the map has finished attaching. */
+    fun visibleBounds(): Bounds? {
+        val bounds = map?.projection?.visibleRegion?.latLngBounds ?: return null
+        return Bounds(
+            south = bounds.latitudeSouth,
+            west = bounds.longitudeWest,
+            north = bounds.latitudeNorth,
+            east = bounds.longitudeEast,
+        )
+    }
 
     fun setShooter(s: ShooterPosition?) {
         shooter = s

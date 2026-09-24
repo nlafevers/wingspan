@@ -56,6 +56,7 @@ import com.wingspan.app.ui.editor.EditorViewModel
 import com.wingspan.app.ui.editor.ZoneFileIo
 import com.wingspan.app.ui.editor.ZoneInfoSheet
 import com.wingspan.app.ui.editor.ZoneNameDialog
+import com.wingspan.app.ui.offline.DownloadAreaDialog
 import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
@@ -92,6 +93,7 @@ fun MapScreen(
     val showRenameDialog by editorViewModel.showRenameDialog.collectAsStateWithLifecycle()
     val pendingImport by editorViewModel.pendingImport.collectAsStateWithLifecycle()
     var addMenuExpanded by remember { mutableStateOf(false) }
+    var downloadAreaRequest by remember { mutableStateOf<Pair<Bounds, Double>?>(null) }
 
     fun toast(text: String) {
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
@@ -178,6 +180,11 @@ fun MapScreen(
             MapMenu(
                 onSettings = onOpenSettings,
                 onOffline = onOpenOffline,
+                onDownloadArea = {
+                    controller.visibleBounds()?.let { bounds ->
+                        downloadAreaRequest = bounds to controller.currentZoom()
+                    }
+                },
                 onSnapshots = onOpenSnapshots,
                 onExportZones = { exportLauncher.launch(ZoneFileIo.suggestedExportName()) },
                 onImportZones = { importLauncher.launch(arrayOf("*/*")) },
@@ -444,6 +451,33 @@ fun MapScreen(
                     },
                 )
             }
+        }
+
+        val pendingDownload = downloadAreaRequest
+        if (pendingDownload != null) {
+            val (bounds, zoom) = pendingDownload
+            DownloadAreaDialog(
+                basemap = basemap,
+                bounds = bounds,
+                currentZoom = zoom,
+                onConfirm = { name, minZoom, maxZoom ->
+                    downloadAreaRequest = null
+                    context.appContainer().offlineRepository.startDownload(
+                        name,
+                        basemap,
+                        bounds.south,
+                        bounds.west,
+                        bounds.north,
+                        bounds.east,
+                        minZoom,
+                        maxZoom,
+                        context.resources.displayMetrics.density,
+                    )
+                    toast("Download started")
+                    onOpenOffline()
+                },
+                onDismiss = { downloadAreaRequest = null },
+            )
         }
     }
 }
