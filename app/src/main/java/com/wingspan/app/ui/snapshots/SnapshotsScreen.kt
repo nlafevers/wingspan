@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,8 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wingspan.app.R
 import com.wingspan.app.appContainer
 import com.wingspan.app.data.FiringSnapshot
 import com.wingspan.app.ui.Formatters
@@ -85,7 +86,7 @@ fun SnapshotsScreen(
                         onClick = { exportLauncher.launch(SnapshotExport.suggestedName()) },
                         enabled = snapshots.isNotEmpty(),
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = "Export all")
+                        Icon(painterResource(R.drawable.ic_download), contentDescription = "Export all")
                     }
                 },
             )
