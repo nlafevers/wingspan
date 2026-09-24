@@ -1,6 +1,7 @@
 package com.wingspan.app.ui.map
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.PointF
 import android.graphics.RectF
 import android.view.MotionEvent
@@ -341,6 +342,11 @@ class MapController(private val context: Context) {
     }
 
     fun currentZoom(): Double = map?.cameraPosition?.zoom ?: 3.0
+
+    /** Renders the current map, including all overlay layers, into a bitmap. */
+    fun captureBitmap(callback: (Bitmap) -> Unit) {
+        map?.snapshot { callback(it) }
+    }
 
     /** The area currently on screen, or null before the map has finished attaching. */
     fun visibleBounds(): Bounds? {

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -60,6 +61,8 @@ import com.wingspan.app.ui.offline.DownloadAreaDialog
 import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
+import com.wingspan.app.ui.snapshots.SnapshotCapture
+import com.wingspan.app.ui.snapshots.SnapshotNotesDialog
 import kotlinx.coroutines.launch
 
 @Composable
@@ -94,6 +97,8 @@ fun MapScreen(
     val pendingImport by editorViewModel.pendingImport.collectAsStateWithLifecycle()
     var addMenuExpanded by remember { mutableStateOf(false) }
     var downloadAreaRequest by remember { mutableStateOf<Pair<Bounds, Double>?>(null) }
+    var pendingPng by remember { mutableStateOf<ByteArray?>(null) }
+    var showNotesDialog by remember { mutableStateOf(false) }
 
     fun toast(text: String) {
         Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
@@ -310,6 +315,25 @@ fun MapScreen(
             ) {
                 Icon(Icons.Default.Place, contentDescription = "Recenter")
             }
+            val canSnapshot = currentFanState != null && editorMode is EditorViewModel.EditorMode.Idle
+            SmallFloatingActionButton(
+                onClick = {
+                    if (canSnapshot) {
+                        controller.captureBitmap { bitmap ->
+                            pendingPng = SnapshotCapture.toPng(bitmap)
+                            showNotesDialog = true
+                        }
+                    }
+                },
+                containerColor = if (canSnapshot) {
+                    MaterialTheme.colorScheme.surface
+                } else {
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                },
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Icon(Icons.Default.Star, contentDescription = "Snapshot")
+            }
         }
 
         if (editorMode !is EditorViewModel.EditorMode.Idle) {
@@ -477,6 +501,28 @@ fun MapScreen(
                     onOpenOffline()
                 },
                 onDismiss = { downloadAreaRequest = null },
+            )
+        }
+
+        if (showNotesDialog) {
+            SnapshotNotesDialog(
+                onConfirm = { notes ->
+                    showNotesDialog = false
+                    val png = pendingPng
+                    pendingPng = null
+                    if (png != null) {
+                        viewModel.buildSnapshot(notes)?.let { snapshot ->
+                            scope.launch {
+                                viewModel.saveSnapshot(snapshot, png)
+                                toast("Snapshot saved")
+                            }
+                        }
+                    }
+                },
+                onDismiss = {
+                    showNotesDialog = false
+                    pendingPng = null
+                },
             )
         }
     }

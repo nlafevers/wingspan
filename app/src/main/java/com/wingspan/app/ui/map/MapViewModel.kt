@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wingspan.app.AppContainer
+import com.wingspan.app.data.FiringSnapshot
 import com.wingspan.app.data.SettingsRepository
+import com.wingspan.app.data.SnapshotFan
+import com.wingspan.app.data.SnapshotRepository
 import com.wingspan.app.data.ZoneRepository
 import com.wingspan.app.data.location.LocationFix
 import com.wingspan.app.data.location.LocationProvider
@@ -21,6 +24,7 @@ import com.wingspan.app.domain.geo.FanCalculator
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.domain.geo.trueToMagnetic
+import java.io.File
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.pow
@@ -76,6 +80,7 @@ class MapViewModel(
     private val locationProvider: LocationProvider,
     private val zoneRepository: ZoneRepository,
     private val declinationProvider: DeclinationProvider,
+    private val snapshotRepository: SnapshotRepository,
 ) : ViewModel() {
 
     val basemap: StateFlow<Basemap> = settingsRepository.basemapKey
@@ -87,6 +92,14 @@ class MapViewModel(
 
     fun setBasemap(b: Basemap) {
         viewModelScope.launch { settingsRepository.setBasemapKey(b.key) }
+    }
+
+    // buildSnapshot() must be synchronous, so the latest settings are kept here rather than
+    // read directly from settingsRepository.settings (a suspending Flow) at call time.
+    private var latestSettings: LoadSettings = LoadSettings()
+
+    init {
+        viewModelScope.launch { settingsRepository.settings.collect { latestSettings = it } }
     }
 
     private val gpsFix = MutableStateFlow<LocationFix?>(null)
@@ -224,6 +237,41 @@ class MapViewModel(
         shooter.value?.let { cameraRequests.tryEmit(it.position) }
     }
 
+    /**
+     * Builds a [FiringSnapshot] from the current field of fire, or null when there is no shooter
+     * position. [maxRangeM] is the radius the fans were actually drawn at (maximum range plus the
+     * wind buffer, i.e. [RangeResult.fanRangeM]) rather than a separate wind column: SnapshotEntity
+     * has no wind field of its own, and the wind speed itself is still recoverable from the stored
+     * settings JSON.
+     */
+    fun buildSnapshot(notes: String): FiringSnapshot? {
+        val state = fanState.value ?: return null
+        return FiringSnapshot(
+            id = 0,
+            timestampMs = System.currentTimeMillis(),
+            position = state.origin,
+            positionSource = state.source.name,
+            settings = latestSettings,
+            maxRangeM = state.range.fanRangeM,
+            effectiveRangeM = state.range.effectiveRangeM,
+            declinationDeg = state.declinationDeg,
+            fans = state.fans.map { fanView ->
+                SnapshotFan(
+                    leftTrueDeg = fanView.fan.leftTrueDeg,
+                    rightTrueDeg = fanView.fan.rightTrueDeg,
+                    leftMagDeg = fanView.leftMagDeg,
+                    rightMagDeg = fanView.rightMagDeg,
+                    fullCircle = fanView.fan.fullCircle,
+                )
+            },
+            notes = notes,
+            imageFile = File(""),
+        )
+    }
+
+    suspend fun saveSnapshot(snapshot: FiringSnapshot, png: ByteArray): Long =
+        snapshotRepository.create(snapshot, png)
+
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -232,6 +280,7 @@ class MapViewModel(
                     container.locationProvider,
                     container.zoneRepository,
                     container.declinationProvider,
+                    container.snapshotRepository,
                 )
             }
         }
