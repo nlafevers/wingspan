@@ -14,12 +14,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.wingspan.app.ui.map.MapScreen
 import com.wingspan.app.ui.offline.OfflineScreen
 import com.wingspan.app.ui.settings.SettingsScreen
+import com.wingspan.app.ui.snapshots.SnapshotDetailScreen
+import com.wingspan.app.ui.snapshots.SnapshotsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +69,21 @@ fun WingspanApp() {
             OfflineScreen(onBack = { navController.popBackStack() })
         }
         composable("snapshots") {
-            ComingSoonScreen(onBack = { navController.popBackStack() }, title = "Snapshots")
+            SnapshotsScreen(
+                onBack = { navController.popBackStack() },
+                onOpen = { id -> navController.navigate("snapshot/$id") },
+            )
+        }
+        composable(
+            "snapshot/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getLong("id") ?: 0L
+            SnapshotDetailScreen(
+                id = id,
+                onBack = { navController.popBackStack() },
+                onShowOnMap = { /* wired in a later step, WS-8.4 */ },
+            )
         }
     }
 }
