@@ -1015,7 +1015,7 @@ Acceptance criteria for Phase 8:
 
 Goal: a report mode records shots and their approximate directions from one or more firing positions and exports a printable PDF map with the load settings.
 
-- [x] **WS-9.1** Add the report domain model and PDF page-layout geometry
+- [x] **WS-9.1** Add the report domain model and PDF page-layout geometry (Commit: 8782dc1)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/geo/LatLon.kt, app/src/main/java/com/wingspan/app/domain/geo/EnuProjection.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt, app/src/main/java/com/wingspan/app/domain/geo/Zones.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/geo/LatLon.kt, app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/domain/report/ReportLayout.kt, app/src/test/java/com/wingspan/app/domain/report/ReportLayoutTest.kt
