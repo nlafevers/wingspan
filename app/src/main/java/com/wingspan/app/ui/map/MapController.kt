@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.PointF
 import android.graphics.RectF
 import android.view.MotionEvent
+import com.wingspan.app.data.FiringSnapshot
 import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.geo.EnuProjection
 import com.wingspan.app.domain.geo.Geometry2D
@@ -79,6 +80,7 @@ class MapController(private val context: Context) {
     private var fanState: FanUiState? = null
     private var selectedFanState: FanUiState? = null
     private var selectedFanIndexValue: Int? = null
+    private var snapshotFanState: FiringSnapshot? = null
     private var onLongPress: ((LatLon) -> Unit)? = null
     private var onTap: ((TapHit) -> Unit)? = null
     private var handleDragListener: HandleDragListener? = null
@@ -258,7 +260,15 @@ class MapController(private val context: Context) {
                 .withProperties(lineColor("#FFD600"), lineWidth(4f))
         )
 
-        // Steps 12-13 (snapshot-fans) slot in here in future work, above.
+        style.addSource(GeoJsonSource("snapshot-fans"))
+        style.addLayer(
+            FillLayer("snapshot-fans-fill", "snapshot-fans")
+                .withProperties(fillColor("#FFB300"), fillOpacity(0.25f))
+        )
+        style.addLayer(
+            LineLayer("snapshot-fans-outline", "snapshot-fans")
+                .withProperties(lineColor("#FF8F00"), lineWidth(2f))
+        )
 
         style.addSource(GeoJsonSource("position"))
         style.addLayer(
@@ -316,6 +326,7 @@ class MapController(private val context: Context) {
         applyZones()
         applyFans()
         applySelectedFan()
+        applySnapshotFans()
         applyEditorRender()
     }
 
@@ -522,6 +533,42 @@ class MapController(private val context: Context) {
         style.getSourceAs<GeoJsonSource>("fans")?.setGeoJson(FeatureCollection.fromFeatures(fillFeatures))
         style.getSourceAs<GeoJsonSource>("fans-effective")
             ?.setGeoJson(FeatureCollection.fromFeatures(effectiveFeatures))
+    }
+
+    fun setSnapshotFans(snapshot: FiringSnapshot?) {
+        snapshotFanState = snapshot
+        applySnapshotFans()
+    }
+
+    private fun applySnapshotFans() {
+        val style = style ?: return
+        val snapshot = snapshotFanState
+
+        val fillFeatures = mutableListOf<Feature>()
+        if (snapshot != null) {
+            for (fan in snapshot.fans) {
+                val outline = Sector.sectorOutline(
+                    snapshot.position, fan.leftTrueDeg, fan.rightTrueDeg, snapshot.maxRangeM
+                ).map { Point.fromLngLat(it.lon, it.lat) }
+                val closedOutline = if (outline.isNotEmpty() && outline.first() != outline.last()) {
+                    outline + outline.first()
+                } else {
+                    outline
+                }
+                fillFeatures.add(Feature.fromGeometry(Polygon.fromLngLats(listOf(closedOutline))))
+            }
+
+            val positionRing = Sector.circleOutline(snapshot.position, 3.0)
+                .map { Point.fromLngLat(it.lon, it.lat) }
+            val closedPositionRing = if (positionRing.isNotEmpty() && positionRing.first() != positionRing.last()) {
+                positionRing + positionRing.first()
+            } else {
+                positionRing
+            }
+            fillFeatures.add(Feature.fromGeometry(Polygon.fromLngLats(listOf(closedPositionRing))))
+        }
+
+        style.getSourceAs<GeoJsonSource>("snapshot-fans")?.setGeoJson(FeatureCollection.fromFeatures(fillFeatures))
     }
 
     fun setSelectedFan(state: FanUiState?, index: Int?) {

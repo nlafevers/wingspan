@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Star
@@ -24,6 +25,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
@@ -45,6 +47,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.text.DateFormat
+import java.util.Date
 import kotlin.math.roundToInt
 import com.wingspan.app.appContainer
 import com.wingspan.app.data.geojson.GeoJsonCodec
@@ -67,6 +71,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MapScreen(
+    snapshotId: Long,
     onOpenSettings: () -> Unit,
     onOpenOffline: () -> Unit,
     onOpenSnapshots: () -> Unit,
@@ -82,6 +87,7 @@ fun MapScreen(
     val zones by viewModel.zones.collectAsStateWithLifecycle()
     val fanState by viewModel.fanState.collectAsStateWithLifecycle()
     val selectedFanIndex by viewModel.selectedFanIndex.collectAsStateWithLifecycle()
+    val viewingSnapshot by viewModel.viewingSnapshot.collectAsStateWithLifecycle()
     var showFanDetail by remember { mutableStateOf(false) }
     LaunchedEffect(selectedFanIndex) { showFanDetail = false }
 
@@ -141,6 +147,8 @@ fun MapScreen(
         editorViewModel.message.collect { toast(it) }
     }
 
+    LaunchedEffect(snapshotId) { if (snapshotId >= 0) viewModel.viewSnapshot(snapshotId) }
+    LaunchedEffect(viewingSnapshot) { controller.setSnapshotFans(viewingSnapshot) }
     LaunchedEffect(basemap) { controller.setBasemap(basemap) }
     LaunchedEffect(shooter) { controller.setShooter(shooter) }
     LaunchedEffect(zones) { controller.setZones(zones) }
@@ -214,7 +222,7 @@ fun MapScreen(
                     modifier = Modifier.padding(top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (manualMode) {
+                    if (manualMode && viewingSnapshot == null) {
                         Surface(
                             color = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier.padding(end = 4.dp),
@@ -245,7 +253,26 @@ fun MapScreen(
                 .padding(top = 64.dp, start = 8.dp, end = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (currentFanState != null && currentFanState.insideZone) {
+            val snapshotBeingViewed = viewingSnapshot
+            if (snapshotBeingViewed != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Viewing snapshot from " +
+                                DateFormat.getDateTimeInstance().format(Date(snapshotBeingViewed.timestampMs))
+                        )
+                        IconButton(onClick = { viewModel.closeSnapshotView() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+                }
+            } else if (currentFanState != null && currentFanState.insideZone) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.padding(top = 4.dp),

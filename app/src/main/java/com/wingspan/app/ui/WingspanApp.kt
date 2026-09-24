@@ -54,9 +54,14 @@ private fun ComingSoonScreen(onBack: () -> Unit, title: String) {
 @Composable
 fun WingspanApp() {
     val navController = rememberNavController()
-    NavHost(navController, startDestination = "map") {
-        composable("map") {
+    NavHost(navController, startDestination = "map?snapshotId=-1") {
+        composable(
+            "map?snapshotId={snapshotId}",
+            arguments = listOf(navArgument("snapshotId") { type = NavType.LongType; defaultValue = -1L }),
+        ) { backStackEntry ->
+            val snapshotId = backStackEntry.arguments?.getLong("snapshotId") ?: -1L
             MapScreen(
+                snapshotId = snapshotId,
                 onOpenSettings = { navController.navigate("settings") },
                 onOpenOffline = { navController.navigate("offline") },
                 onOpenSnapshots = { navController.navigate("snapshots") },
@@ -82,7 +87,11 @@ fun WingspanApp() {
             SnapshotDetailScreen(
                 id = id,
                 onBack = { navController.popBackStack() },
-                onShowOnMap = { /* wired in a later step, WS-8.4 */ },
+                onShowOnMap = { id ->
+                    navController.navigate("map?snapshotId=$id") {
+                        popUpTo("map?snapshotId={snapshotId}") { inclusive = true }
+                    }
+                },
             )
         }
     }

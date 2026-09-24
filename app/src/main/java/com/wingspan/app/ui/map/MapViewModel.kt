@@ -272,6 +272,22 @@ class MapViewModel(
     suspend fun saveSnapshot(snapshot: FiringSnapshot, png: ByteArray): Long =
         snapshotRepository.create(snapshot, png)
 
+    val viewingSnapshot = MutableStateFlow<FiringSnapshot?>(null)
+
+    fun viewSnapshot(id: Long) {
+        viewModelScope.launch {
+            val snapshot = snapshotRepository.get(id)
+            viewingSnapshot.value = snapshot
+            if (snapshot != null) {
+                cameraRequests.tryEmit(snapshot.position)
+            }
+        }
+    }
+
+    fun closeSnapshotView() {
+        viewingSnapshot.value = null
+    }
+
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer {

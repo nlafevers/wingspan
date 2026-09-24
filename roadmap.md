@@ -982,7 +982,7 @@ Goal: capture a timestamped record plus map image of the current firing position
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds. **(manual, on device)**: Share opens the system sheet; sending to a messaging app delivers the image with the text summary.
 
-- [ ] **WS-8.4** Show a saved snapshot on the map
+- [x] **WS-8.4** Show a saved snapshot on the map
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/WingspanApp.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/WingspanApp.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
