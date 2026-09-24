@@ -926,7 +926,7 @@ Acceptance criteria for Phase 7:
 
 Goal: capture a timestamped record plus map image of the current firing position, browse and annotate snapshots, re-display them on the map, and share or export them.
 
-- [-] **WS-8.1** Capture a snapshot from the map
+- [x] **WS-8.1** Capture a snapshot from the map (Commit: 6edd400)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/data/SnapshotRepository.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/ui/snapshots/SnapshotCapture.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
