@@ -139,6 +139,9 @@ class OfflineRepository(context: Context) {
                         }
 
                         override fun onError(error: OfflineRegionError) {
+                            // Left in activeDownloads (not removed) so the error is visible on the
+                            // offline screen instead of the download silently vanishing back to a
+                            // plain, unexplained 0-tile region card.
                             activeDownloads.update {
                                 it + (offlineRegion.id to DownloadProgress(
                                     regionId = offlineRegion.id,
@@ -150,7 +153,6 @@ class OfflineRepository(context: Context) {
                                 ))
                             }
                             offlineRegion.setDownloadState(OfflineRegion.STATE_INACTIVE)
-                            activeDownloads.update { it - offlineRegion.id }
                         }
 
                         override fun mapboxTileCountLimitExceeded(limit: Long) {
@@ -165,7 +167,6 @@ class OfflineRepository(context: Context) {
                                 ))
                             }
                             offlineRegion.setDownloadState(OfflineRegion.STATE_INACTIVE)
-                            activeDownloads.update { it - offlineRegion.id }
                         }
                     })
                     offlineRegion.setDownloadState(OfflineRegion.STATE_ACTIVE)
