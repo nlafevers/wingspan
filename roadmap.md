@@ -878,7 +878,7 @@ Goal: users can download the visible map area for a basemap over a zoom range, w
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** build succeeds.
 
-- [-] **WS-7.3** Add "Download this area" from the map
+- [x] **WS-7.3** Add "Download this area" from the map (Commit: 704b29b)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/map/MapMenu.kt, app/src/main/java/com/wingspan/app/domain/geo/TileMath.kt, app/src/main/java/com/wingspan/app/data/map/OfflineRepository.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/offline/DownloadAreaDialog.kt, app/src/main/java/com/wingspan/app/ui/map/MapMenu.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
