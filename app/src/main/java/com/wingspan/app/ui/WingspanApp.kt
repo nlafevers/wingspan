@@ -9,11 +9,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -59,7 +61,15 @@ fun WingspanApp() {
             "map?snapshotId={snapshotId}",
             arguments = listOf(navArgument("snapshotId") { type = NavType.LongType; defaultValue = -1L }),
         ) { backStackEntry ->
-            val snapshotId = backStackEntry.arguments?.getLong("snapshotId") ?: -1L
+            val initialSnapshotId = backStackEntry.arguments?.getLong("snapshotId") ?: -1L
+            // "Show on map" (below) updates this handle on this SAME entry and pops back to it,
+            // rather than navigating to a fresh "map?snapshotId=..." route: a new route string
+            // would create a new NavBackStackEntry and therefore a brand new MapViewModel,
+            // silently discarding in-memory session state (manual position mode, the manually
+            // placed position, etc.) every time a snapshot was viewed.
+            val snapshotId by backStackEntry.savedStateHandle
+                .getStateFlow("snapshotId", initialSnapshotId)
+                .collectAsStateWithLifecycle()
             MapScreen(
                 snapshotId = snapshotId,
                 onOpenSettings = { navController.navigate("settings") },
@@ -87,10 +97,10 @@ fun WingspanApp() {
             SnapshotDetailScreen(
                 id = id,
                 onBack = { navController.popBackStack() },
-                onShowOnMap = { id ->
-                    navController.navigate("map?snapshotId=$id") {
-                        popUpTo("map?snapshotId={snapshotId}") { inclusive = true }
-                    }
+                onShowOnMap = { snapshotId ->
+                    navController.getBackStackEntry("map?snapshotId={snapshotId}")
+                        .savedStateHandle["snapshotId"] = snapshotId
+                    navController.popBackStack("map?snapshotId={snapshotId}", inclusive = false)
                 },
             )
         }
