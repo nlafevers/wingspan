@@ -1,5 +1,7 @@
 package com.wingspan.app.ui.snapshots
 
+import android.content.ContentResolver
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -30,6 +32,10 @@ class SnapshotsViewModel(private val repo: SnapshotRepository) : ViewModel() {
 
     fun delete(id: Long) {
         viewModelScope.launch { repo.delete(id) }
+    }
+
+    suspend fun exportAll(resolver: ContentResolver, uri: Uri) {
+        SnapshotExport.writeZip(resolver, uri, repo.getAll())
     }
 
     fun summaryText(s: FiringSnapshot): String {
