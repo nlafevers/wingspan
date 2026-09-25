@@ -1067,7 +1067,7 @@ Goal: a report mode records shots and their approximate directions from one or m
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds. The rendered output is checked on device in WS-9.6; the page geometry itself is already covered by `ReportLayoutTest`.
 
-- [x] **WS-9.5** Compose the "Model and assumptions" appendix page
+- [x] **WS-9.5** Compose the "Model and assumptions" appendix page (Commit: fe279d4)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/report/PdfReportComposer.kt, app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/ui/Formatters.kt, app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/AppendixText.kt, app/src/test/java/com/wingspan/app/ui/report/AppendixTextTest.kt, app/src/main/java/com/wingspan/app/ui/report/PdfAppendixComposer.kt, app/src/main/java/com/wingspan/app/ui/report/PdfReportComposer.kt
