@@ -1127,7 +1127,7 @@ Run only after all phases are done, with one exception: the two documentation st
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew clean assembleDebug assembleRelease testDebugUnitTest && ls -la app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/release/app-release-unsigned.apk`
   - **Done when:** both APKs exist and all unit tests pass.
 
-- [x] **FINAL-10.3** Document the provenance of the ballistics reference data
+- [x] **FINAL-10.3** Document the provenance of the ballistics reference data (Commit: 52e4deb)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/ballistics/ShotSize.kt, app/src/main/java/com/wingspan/app/domain/ballistics/PelletMaterial.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Choke.kt, app/src/main/java/com/wingspan/app/domain/ballistics/DragModel.kt, app/src/test/java/com/wingspan/app/domain/ballistics/RangeCalculatorTest.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/ballistics/ShotSize.kt, app/src/main/java/com/wingspan/app/domain/ballistics/PelletMaterial.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Choke.kt, app/src/main/java/com/wingspan/app/domain/ballistics/DragModel.kt
