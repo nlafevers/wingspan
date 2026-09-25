@@ -24,6 +24,7 @@ fun MapMenu(
     onSnapshots: () -> Unit,
     onExportZones: () -> Unit,
     onImportZones: () -> Unit,
+    onReportMode: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -75,6 +76,13 @@ fun MapMenu(
                 onClick = {
                     expanded = false
                     onImportZones()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Report mode") },
+                onClick = {
+                    expanded = false
+                    onReportMode()
                 },
             )
         }

@@ -54,6 +54,7 @@ import com.wingspan.app.appContainer
 import com.wingspan.app.data.geojson.GeoJsonCodec
 import com.wingspan.app.data.location.LocationProvider
 import com.wingspan.app.data.map.Basemap
+import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.ui.Formatters
 import com.wingspan.app.ui.editor.EditorControls
@@ -65,8 +66,11 @@ import com.wingspan.app.ui.offline.DownloadAreaDialog
 import com.wingspan.app.domain.geo.NoFireLine
 import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
+import com.wingspan.app.ui.report.ReportControls
+import com.wingspan.app.ui.report.ReportViewModel
 import com.wingspan.app.ui.snapshots.SnapshotCapture
 import com.wingspan.app.ui.snapshots.SnapshotNotesDialog
+import androidx.compose.material3.OutlinedTextField
 import kotlinx.coroutines.launch
 
 @Composable
@@ -101,6 +105,15 @@ fun MapScreen(
     val selectedZone by editorViewModel.selectedZone.collectAsStateWithLifecycle()
     val showRenameDialog by editorViewModel.showRenameDialog.collectAsStateWithLifecycle()
     val pendingImport by editorViewModel.pendingImport.collectAsStateWithLifecycle()
+
+    val reportViewModel: ReportViewModel = viewModel(
+        factory = ReportViewModel.factory(context.appContainer())
+    )
+    val report by reportViewModel.report.collectAsStateWithLifecycle()
+    val reportMode by reportViewModel.reportMode.collectAsStateWithLifecycle()
+    val activePositionId by reportViewModel.activePositionId.collectAsStateWithLifecycle()
+    var pendingShotEdit by remember { mutableStateOf<Pair<Long, Int>?>(null) }
+
     var addMenuExpanded by remember { mutableStateOf(false) }
     var downloadAreaRequest by remember { mutableStateOf<Pair<Bounds, Double>?>(null) }
     var pendingPng by remember { mutableStateOf<ByteArray?>(null) }
@@ -147,13 +160,19 @@ fun MapScreen(
         editorViewModel.message.collect { toast(it) }
     }
 
-    LaunchedEffect(snapshotId) { if (snapshotId >= 0) viewModel.viewSnapshot(snapshotId) }
+    LaunchedEffect(snapshotId) {
+        if (snapshotId >= 0) {
+            viewModel.viewSnapshot(snapshotId)
+            reportViewModel.setReportMode(false)
+        }
+    }
     LaunchedEffect(viewingSnapshot) { controller.setSnapshotFans(viewingSnapshot) }
     LaunchedEffect(basemap) { controller.setBasemap(basemap) }
     LaunchedEffect(shooter) { controller.setShooter(shooter) }
     LaunchedEffect(zones) { controller.setZones(zones) }
     LaunchedEffect(fanState) { controller.setFans(fanState) }
     LaunchedEffect(fanState, selectedFanIndex) { controller.setSelectedFan(fanState, selectedFanIndex) }
+    LaunchedEffect(report, reportMode) { controller.setReport(if (reportMode) report else null) }
     var selectedFanLabels by remember { mutableStateOf<MapController.SelectedFanLabels?>(null) }
     LaunchedEffect(controller) { controller.setSelectedFanLabelsListener { selectedFanLabels = it } }
     LaunchedEffect(Unit) {
@@ -165,6 +184,14 @@ fun MapScreen(
         controller.setOnTap { hit ->
             when {
                 editorMode !is EditorViewModel.EditorMode.Idle -> editorViewModel.onMapTap(hit.position)
+                reportMode -> {
+                    val posId = activePositionId
+                    if (posId != null) {
+                        reportViewModel.addShotAt(posId, hit.position)
+                    } else {
+                        toast("Add a firing position first")
+                    }
+                }
                 hit.zoneId != null -> editorViewModel.onTap(hit, zones)
                 hit.fanIndex != null -> viewModel.selectFan(hit.fanIndex)
                 else -> viewModel.selectFan(null)
@@ -201,6 +228,16 @@ fun MapScreen(
                 onSnapshots = onOpenSnapshots,
                 onExportZones = { exportLauncher.launch(ZoneFileIo.suggestedExportName()) },
                 onImportZones = { importLauncher.launch(arrayOf("*/*")) },
+                onReportMode = {
+                    if (editorMode !is EditorViewModel.EditorMode.Idle) {
+                        toast("Finish or cancel the current edit first")
+                    } else {
+                        if (viewingSnapshot != null) {
+                            viewModel.closeSnapshotView()
+                        }
+                        reportViewModel.setReportMode(true)
+                    }
+                },
             )
         }
         val currentFanState = fanState
@@ -292,7 +329,7 @@ fun MapScreen(
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             horizontalAlignment = Alignment.End,
         ) {
-            if (editorMode is EditorViewModel.EditorMode.Idle) {
+            if (editorMode is EditorViewModel.EditorMode.Idle && !reportMode) {
                 Box {
                     FloatingActionButton(onClick = { addMenuExpanded = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add zone")
@@ -379,6 +416,22 @@ fun MapScreen(
                             else -> Unit
                         }
                     },
+                )
+            }
+        }
+
+        if (reportMode) {
+            Box(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
+                ReportControls(
+                    report = report,
+                    activePositionId = activePositionId,
+                    canAddPosition = currentFanState != null,
+                    onAddPosition = { currentFanState?.let { reportViewModel.addPosition(it) } },
+                    onSelectPosition = { reportViewModel.selectPosition(it) },
+                    onEditShot = { positionId, shotIndex -> pendingShotEdit = positionId to shotIndex },
+                    onClear = { reportViewModel.clearReport() },
+                    onExport = { /* PDF export wired up in a later step */ },
+                    onExit = { reportViewModel.setReportMode(false) },
                 )
             }
         }
@@ -529,6 +582,66 @@ fun MapScreen(
                 },
                 onDismiss = { downloadAreaRequest = null },
             )
+        }
+
+        val currentShotEdit = pendingShotEdit
+        if (currentShotEdit != null) {
+            val (editPositionId, editShotIndex) = currentShotEdit
+            val editPosition = report.positions.find { it.id == editPositionId }
+            val editShot = editPosition?.shots?.getOrNull(editShotIndex)
+            if (editPosition == null || editShot == null) {
+                pendingShotEdit = null
+            } else {
+                val initialMagnetic = Geometry2D.normalizeBearing(editShot.bearingTrueDeg - editPosition.declinationDeg)
+                var bearingText by remember(currentShotEdit) {
+                    mutableStateOf(initialMagnetic.roundToInt().toString())
+                }
+                var labelText by remember(currentShotEdit) { mutableStateOf(editShot.label) }
+                AlertDialog(
+                    onDismissRequest = { pendingShotEdit = null },
+                    title = { Text("Edit shot") },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                value = bearingText,
+                                onValueChange = { bearingText = it },
+                                label = { Text("Magnetic bearing") },
+                            )
+                            OutlinedTextField(
+                                value = labelText,
+                                onValueChange = { labelText = it },
+                                label = { Text("Label (optional)") },
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                            TextButton(
+                                onClick = {
+                                    reportViewModel.removeShot(editPositionId, editShotIndex)
+                                    pendingShotEdit = null
+                                },
+                                modifier = Modifier.padding(top = 8.dp),
+                            ) {
+                                Text("Delete shot")
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            bearingText.toDoubleOrNull()?.let {
+                                reportViewModel.setShotBearingMagnetic(editPositionId, editShotIndex, it)
+                            }
+                            reportViewModel.setShotLabel(editPositionId, editShotIndex, labelText)
+                            pendingShotEdit = null
+                        }) {
+                            Text("Save")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingShotEdit = null }) {
+                            Text("Cancel")
+                        }
+                    },
+                )
+            }
         }
 
         if (showNotesDialog) {

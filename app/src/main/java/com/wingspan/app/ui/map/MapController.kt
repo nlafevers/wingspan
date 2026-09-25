@@ -15,6 +15,7 @@ import com.wingspan.app.domain.geo.NoFireMarker
 import com.wingspan.app.domain.geo.NoFirePolygon
 import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.domain.geo.Sector
+import com.wingspan.app.domain.report.RangeReport
 import com.wingspan.app.ui.Formatters
 import com.wingspan.app.ui.editor.EditorRender
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -81,6 +82,7 @@ class MapController(private val context: Context) {
     private var selectedFanState: FanUiState? = null
     private var selectedFanIndexValue: Int? = null
     private var snapshotFanState: FiringSnapshot? = null
+    private var reportState: RangeReport? = null
     private var onLongPress: ((LatLon) -> Unit)? = null
     private var onTap: ((TapHit) -> Unit)? = null
     private var handleDragListener: HandleDragListener? = null
@@ -180,6 +182,8 @@ class MapController(private val context: Context) {
         // 12. snapshot-fans-fill
         // 13. snapshot-fans-outline
         // 14. position-dot
+        // 14a. report-shots
+        // 14b. report-positions
         // 15. editor-fill
         // 16. editor-outline (bound to editor-polygon)
         // 16b. editor-outline-line (bound to editor-line; same paint, mutually exclusive with 16)
@@ -281,6 +285,22 @@ class MapController(private val context: Context) {
                 )
         )
 
+        style.addSource(GeoJsonSource("report-positions"))
+        style.addSource(GeoJsonSource("report-shots"))
+        style.addLayer(
+            LineLayer("report-shots", "report-shots")
+                .withProperties(lineColor("#6A1B9A"), lineWidth(2.5f))
+        )
+        style.addLayer(
+            CircleLayer("report-positions", "report-positions")
+                .withProperties(
+                    circleRadius(5f),
+                    circleColor("#6A1B9A"),
+                    circleStrokeColor("#FFFFFF"),
+                    circleStrokeWidth(1.5f),
+                )
+        )
+
         style.addSource(GeoJsonSource("editor-polygon"))
         style.addSource(GeoJsonSource("editor-line"))
         style.addSource(GeoJsonSource("editor-midpoints"))
@@ -327,6 +347,7 @@ class MapController(private val context: Context) {
         applyFans()
         applySelectedFan()
         applySnapshotFans()
+        applyReport()
         applyEditorRender()
     }
 
@@ -569,6 +590,51 @@ class MapController(private val context: Context) {
         }
 
         style.getSourceAs<GeoJsonSource>("snapshot-fans")?.setGeoJson(FeatureCollection.fromFeatures(fillFeatures))
+    }
+
+    fun setReport(report: RangeReport?) {
+        reportState = report
+        applyReport()
+    }
+
+    private fun applyReport() {
+        val style = style ?: return
+        val report = reportState
+
+        val positionFeatures = mutableListOf<Feature>()
+        val shotFeatures = mutableListOf<Feature>()
+
+        if (report != null) {
+            for (position in report.positions) {
+                val positionFeature = Feature.fromGeometry(
+                    Point.fromLngLat(position.position.lon, position.position.lat)
+                )
+                positionFeature.addNumberProperty("positionId", position.id)
+                positionFeatures.add(positionFeature)
+
+                val proj = EnuProjection(position.position)
+                position.shots.forEachIndexed { shotIndex, shot ->
+                    val tip = proj.fromEnu(
+                        Geometry2D.bearingToUnitVector(shot.bearingTrueDeg) * position.fanRangeM
+                    )
+                    val line = LineString.fromLngLats(
+                        listOf(
+                            Point.fromLngLat(position.position.lon, position.position.lat),
+                            Point.fromLngLat(tip.lon, tip.lat),
+                        )
+                    )
+                    val shotFeature = Feature.fromGeometry(line)
+                    shotFeature.addNumberProperty("positionId", position.id)
+                    shotFeature.addNumberProperty("shotIndex", shotIndex)
+                    shotFeatures.add(shotFeature)
+                }
+            }
+        }
+
+        style.getSourceAs<GeoJsonSource>("report-positions")
+            ?.setGeoJson(FeatureCollection.fromFeatures(positionFeatures))
+        style.getSourceAs<GeoJsonSource>("report-shots")
+            ?.setGeoJson(FeatureCollection.fromFeatures(shotFeatures))
     }
 
     fun setSelectedFan(state: FanUiState?, index: Int?) {

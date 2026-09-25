@@ -1038,7 +1038,7 @@ Goal: a report mode records shots and their approximate directions from one or m
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build passes and `ReportViewModel` compiles with `report`, `reportMode` and `activePositionId` exposed.
 
-- [ ] **WS-9.3** Draw report shots on the map and record them by tapping
+- [x] **WS-9.3** Draw report shots on the map and record them by tapping
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/main/java/com/wingspan/app/ui/Formatters.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/ui/report/ReportControls.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/map/MapMenu.kt
