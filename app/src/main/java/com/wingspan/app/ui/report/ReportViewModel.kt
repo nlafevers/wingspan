@@ -1,5 +1,8 @@
 package com.wingspan.app.ui.report
 
+import android.content.ContentResolver
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -7,25 +10,37 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wingspan.app.AppContainer
 import com.wingspan.app.data.ReportRepository
+import com.wingspan.app.data.map.Basemap
+import com.wingspan.app.domain.ballistics.LoadSettings
 import com.wingspan.app.domain.geo.EnuProjection
 import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
+import com.wingspan.app.domain.geo.NoFireZone
 import com.wingspan.app.domain.report.RangeReport
 import com.wingspan.app.domain.report.ReportFan
+import com.wingspan.app.domain.report.ReportLayout
 import com.wingspan.app.domain.report.ReportPosition
 import com.wingspan.app.domain.report.ReportShot
 import com.wingspan.app.ui.map.FanUiState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.atan2
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ReportViewModel(private val reportRepository: ReportRepository) : ViewModel() {
 
     val report: StateFlow<RangeReport> = reportRepository.report
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RangeReport())
+
+    val message = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     val reportMode = MutableStateFlow(false)
 
@@ -107,6 +122,39 @@ class ReportViewModel(private val reportRepository: ReportRepository) : ViewMode
     fun clearReport() {
         viewModelScope.launch { reportRepository.clear() }
         activePositionId.value = null
+    }
+
+    fun suggestedPdfName(): String =
+        "wingspan-report-" + SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date()) + ".pdf"
+
+    suspend fun exportPdf(
+        context: Context,
+        resolver: ContentResolver,
+        uri: Uri,
+        basemap: Basemap,
+        zones: List<NoFireZone>,
+        settings: LoadSettings,
+    ) {
+        val currentReport = report.value
+        val frame = ReportLayout.frameFor(currentReport)
+        val background = frame?.let { ReportSnapshotter.capture(context, basemap, it) }
+        try {
+            withContext(Dispatchers.IO) {
+                resolver.openOutputStream(uri)?.use { stream ->
+                    PdfReportComposer.write(
+                        stream,
+                        currentReport,
+                        zones,
+                        settings,
+                        background,
+                        System.currentTimeMillis(),
+                    )
+                } ?: error("Unable to open output stream")
+            }
+            message.tryEmit("Report exported")
+        } catch (e: Exception) {
+            message.tryEmit("Report export failed")
+        }
     }
 
     companion object {

@@ -1086,7 +1086,7 @@ Goal: a report mode records shots and their approximate directions from one or m
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and `AppendixTextTest` passes. The rendered page is checked on device in WS-9.6.
 
-- [ ] **WS-9.6** Render the basemap for the PDF and export it through the file picker
+- [x] **WS-9.6** Render the basemap for the PDF and export it through the file picker
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/map/MapController.kt, app/src/main/java/com/wingspan/app/data/map/Basemap.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/ui/report/PdfReportComposer.kt, app/src/main/java/com/wingspan/app/ui/report/ReportControls.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/ReportSnapshotter.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt

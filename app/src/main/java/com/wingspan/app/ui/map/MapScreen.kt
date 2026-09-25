@@ -71,6 +71,7 @@ import com.wingspan.app.ui.report.ReportViewModel
 import com.wingspan.app.ui.snapshots.SnapshotCapture
 import com.wingspan.app.ui.snapshots.SnapshotNotesDialog
 import androidx.compose.material3.OutlinedTextField
+import com.wingspan.app.domain.ballistics.LoadSettings
 import kotlinx.coroutines.launch
 
 @Composable
@@ -114,6 +115,9 @@ fun MapScreen(
     val activePositionId by reportViewModel.activePositionId.collectAsStateWithLifecycle()
     var pendingShotEdit by remember { mutableStateOf<Pair<Long, Int>?>(null) }
 
+    val settingsRepository = context.appContainer().settingsRepository
+    val currentSettings by settingsRepository.settings.collectAsStateWithLifecycle(initialValue = LoadSettings())
+
     var addMenuExpanded by remember { mutableStateOf(false) }
     var downloadAreaRequest by remember { mutableStateOf<Pair<Bounds, Double>?>(null) }
     var pendingPng by remember { mutableStateOf<ByteArray?>(null) }
@@ -148,6 +152,16 @@ fun MapScreen(
         }
     }
 
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                reportViewModel.exportPdf(context, resolver, it, basemap, zones, currentSettings)
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (LocationProvider.hasPermission(context)) {
             viewModel.onLocationPermissionResult(true)
@@ -158,6 +172,10 @@ fun MapScreen(
 
     LaunchedEffect(Unit) {
         editorViewModel.message.collect { toast(it) }
+    }
+
+    LaunchedEffect(Unit) {
+        reportViewModel.message.collect { toast(it) }
     }
 
     LaunchedEffect(snapshotId) {
@@ -430,7 +448,7 @@ fun MapScreen(
                     onSelectPosition = { reportViewModel.selectPosition(it) },
                     onEditShot = { positionId, shotIndex -> pendingShotEdit = positionId to shotIndex },
                     onClear = { reportViewModel.clearReport() },
-                    onExport = { /* PDF export wired up in a later step */ },
+                    onExport = { pdfExportLauncher.launch(reportViewModel.suggestedPdfName()) },
                     onExit = { reportViewModel.setReportMode(false) },
                 )
             }
