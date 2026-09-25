@@ -2,6 +2,7 @@ package com.wingspan.app
 
 import android.content.Context
 import com.wingspan.app.data.AndroidDeclination
+import com.wingspan.app.data.ReportRepository
 import com.wingspan.app.data.SettingsRepository
 import com.wingspan.app.data.SnapshotRepository
 import com.wingspan.app.data.ZoneRepository
@@ -17,6 +18,7 @@ class AppContainer(context: Context) {
     val database = AppDatabase.build(context)
     val zoneRepository = ZoneRepository(database.zoneDao())
     val settingsRepository = SettingsRepository(context.settingsDataStore)
+    val reportRepository = ReportRepository(context.settingsDataStore)
     val snapshotRepository = SnapshotRepository(database.snapshotDao(), File(context.filesDir, "snapshots"))
     val locationProvider = LocationProvider(context)
     val declinationProvider: DeclinationProvider = AndroidDeclination()

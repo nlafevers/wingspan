@@ -1027,7 +1027,7 @@ Goal: a report mode records shots and their approximate directions from one or m
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build passes and `ReportLayoutTest` passes.
 
-- [ ] **WS-9.2** Persist the current report and add the report view model
+- [x] **WS-9.2** Persist the current report and add the report view model
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/data/SettingsRepository.kt, app/src/main/java/com/wingspan/app/AppContainer.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/domain/geo/EnuProjection.kt
   - **Edit:** app/src/main/java/com/wingspan/app/data/ReportRepository.kt, app/src/main/java/com/wingspan/app/AppContainer.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt
