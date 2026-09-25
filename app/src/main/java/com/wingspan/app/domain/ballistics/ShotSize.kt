@@ -1,5 +1,17 @@
 package com.wingspan.app.domain.ballistics
 
+/**
+ * Nominal diameters of standard US commercial shot sizes, in inches.
+ *
+ * These are a **nominal industry standard**: catalogued values that shot manufacturers and
+ * reloading references converge on, not measurements of any specific batch of pellets. Real
+ * pellets vary around the nominal figure within normal manufacturing tolerance, so treat each
+ * [diameterInches] as a representative "size on the box" rather than an exact measurement.
+ *
+ * [CUSTOM] is a sentinel, not a real size: its diameter is `0.0` and is never used directly in a
+ * calculation. `LoadSettings.effectiveDiameterInches()` substitutes the user's own
+ * `customDiameterInches` whenever [CUSTOM] is selected.
+ */
 enum class ShotSize(val label: String, val diameterInches: Double) {
     NO_9("9", 0.080),
     NO_8_5("8.5", 0.085),
@@ -17,5 +29,11 @@ enum class ShotSize(val label: String, val diameterInches: Double) {
     BBB("BBB", 0.190),
     T("T", 0.200),
     F("F", 0.220),
+
+    /**
+     * Sentinel entry, not a real shot size. The `0.0` diameter is a placeholder that is never
+     * used in a calculation: `LoadSettings.effectiveDiameterInches()` substitutes the user's own
+     * `customDiameterInches` whenever this entry is selected.
+     */
     CUSTOM("Custom", 0.0),
 }
