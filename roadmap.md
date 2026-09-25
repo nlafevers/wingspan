@@ -1111,7 +1111,7 @@ Acceptance criteria for Phase 9:
 
 Run only after all phases are done, with one exception: the two documentation steps FINAL-10.3 and FINAL-10.4 have no code dependencies and may be pulled forward if convenient.
 
-- [ ] **FINAL-10.1** Run lint and fix all errors
+- [x] **FINAL-10.1** Run lint and fix all errors (Commit: none — already zero errors)
   - **Repos:** wingspan
   - **Read:** app/build.gradle.kts
   - **Edit:** any file reported by lint with severity Error (list them in the commit message)
