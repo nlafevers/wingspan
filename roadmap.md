@@ -1140,7 +1140,7 @@ Run only after all phases are done, with one exception: the two documentation st
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and the unit tests pass with **exactly the same results as before the step**. If any test outcome changes, code was edited rather than comments - stop and report rather than adjusting the test.
 
-- [x] **FINAL-10.4** Write `README.md`
+- [x] **FINAL-10.4** Write `README.md` (Commit: 8101da7)
   - **Repos:** wingspan
   - **Read:** roadmap.md
   - **Edit:** README.md
