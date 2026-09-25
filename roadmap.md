@@ -1119,7 +1119,7 @@ Run only after all phases are done, with one exception: the two documentation st
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew lintDebug && ! grep -q 'severity="Error"' app/build/reports/lint-results-debug.xml && echo "no lint errors"`
   - **Done when:** the report contains no `severity="Error"` entries.
 
-- [ ] **FINAL-10.2** Full build, unit tests, and unsigned release assembly
+- [x] **FINAL-10.2** Full build, unit tests, and unsigned release assembly (Commit: none — verification only)
   - **Repos:** wingspan
   - **Read:** roadmap.md
   - **Edit:** none
