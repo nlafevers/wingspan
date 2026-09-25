@@ -82,6 +82,7 @@ object PdfReportComposer {
         drawTextBlock(canvas, report, settings, timestampMs, units)
 
         document.finishPage(page)
+        PdfAppendixComposer.writePage(document, report, settings, timestampMs)
         document.writeTo(output)
         document.close()
     }
