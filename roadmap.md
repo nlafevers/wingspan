@@ -1051,7 +1051,7 @@ Goal: a report mode records shots and their approximate directions from one or m
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds. **(manual, on device)**: the menu enters report mode, "Add position" records the current position, tapping the map draws a purple arrow from that position, the shot chip opens the edit dialog, and the shots survive force-stopping and relaunching the app.
 
-- [x] **WS-9.4** Compose the PDF report page
+- [x] **WS-9.4** Compose the PDF report page (Commit: 82dabb4)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/report/ReportLayout.kt, app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/ui/Formatters.kt, app/src/main/java/com/wingspan/app/domain/geo/Sector.kt, app/src/main/java/com/wingspan/app/domain/geo/Zones.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/PdfReportComposer.kt
