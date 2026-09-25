@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import com.wingspan.app.domain.ballistics.LoadSettings
 import com.wingspan.app.domain.ballistics.UnitSystem
+import com.wingspan.app.domain.ballistics.Units
 import com.wingspan.app.domain.geo.EnuProjection
 import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
@@ -42,10 +43,6 @@ object PdfReportComposer {
 
     private const val PAGE_WIDTH_PT = 612
     private const val PAGE_HEIGHT_PT = 792
-
-    // Mirrors Formatters' private ft-lbf -> joule conversion: LoadSettings stores the pellet
-    // energy threshold in ft-lbf, but Formatters.energy takes canonical joules.
-    private const val JOULES_PER_FT_LBF = 1.3558179483314004
 
     private val SQUARE = RectF(36f, 36f, 576f, 576f)
 
@@ -426,7 +423,7 @@ object PdfReportComposer {
         val fanRangeM = firstPosition?.fanRangeM ?: 0.0
         val effectiveRangeM = firstPosition?.effectiveRangeM ?: 0.0
         val windBufferM = firstPosition?.windBufferM ?: 0.0
-        val energyThresholdJoules = settings.energyThresholdFtLbf * JOULES_PER_FT_LBF
+        val energyThresholdJoules = Units.ftLbfToJoules(settings.energyThresholdFtLbf)
 
         val summaryItems = listOf(
             "Shot size" to settings.shotSize.label,
