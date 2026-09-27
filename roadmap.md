@@ -1213,7 +1213,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and all `ReportTest` cases pass.
 
-- [x] **WS-11.5** Rework the report-mode controls (Commit: )
+- [x] **WS-11.5** Rework the report-mode controls (Commit: f3544d4)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/report/ReportControls.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt, app/src/main/java/com/wingspan/app/ui/map/MapViewModel.kt, app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/AppContainer.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/ReportControls.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/ui/map/MapScreen.kt
