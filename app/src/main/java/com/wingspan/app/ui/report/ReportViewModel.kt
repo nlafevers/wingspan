@@ -61,7 +61,7 @@ class ReportViewModel(private val reportRepository: ReportRepository) : ViewMode
             timestampMs = id,
             position = state.origin,
             positionSource = state.source.name,
-            maxRangeM = state.range.fanRangeM,
+            maxRangeM = state.range.maxRangeM,
             effectiveRangeM = state.range.effectiveRangeM,
             windBufferM = state.range.windBufferM,
             declinationDeg = state.declinationDeg,

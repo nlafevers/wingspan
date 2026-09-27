@@ -1189,7 +1189,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds. **(manual, on device)**: set wind to 12, velocity to 1400 and energy threshold to 2.0, leave Settings, force-stop the app, reopen Settings: all three fields show the stored values.
 
-- [ ] **WS-11.3** Stop double-counting the wind buffer in report positions (Commit: )
+- [x] **WS-11.3** Stop double-counting the wind buffer in report positions (Commit: )
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/data/ReportRepository.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/domain/ballistics/RangeResult.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt, app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/data/ReportRepository.kt, app/src/test/java/com/wingspan/app/domain/report/ReportTest.kt

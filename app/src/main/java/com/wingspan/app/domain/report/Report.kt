@@ -34,7 +34,27 @@ data class ReportPosition(
 }
 
 @Serializable
-data class RangeReport(val createdMs: Long = 0L, val positions: List<ReportPosition> = emptyList()) {
+data class RangeReport(
+    val createdMs: Long = 0L,
+    val positions: List<ReportPosition> = emptyList(),
+    val version: Int = 1,
+) {
+
+    companion object {
+        const val CURRENT_VERSION = 2
+    }
+
+    /**
+     * Repairs reports written before version 2, whose positions stored the
+     * wind-buffered fan radius in [ReportPosition.maxRangeM].
+     */
+    fun migrated(): RangeReport {
+        if (version >= CURRENT_VERSION) return this
+        return copy(
+            positions = positions.map { it.copy(maxRangeM = it.maxRangeM - it.windBufferM) },
+            version = CURRENT_VERSION,
+        )
+    }
 
     val totalShots: Int get() = positions.sumOf { it.shots.size }
 

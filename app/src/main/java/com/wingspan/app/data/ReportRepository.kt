@@ -19,9 +19,10 @@ class ReportRepository(private val dataStore: DataStore<Preferences>) {
     private val json = Json { ignoreUnknownKeys = true }
 
     val report: Flow<RangeReport> = dataStore.data.map { prefs ->
-        prefs[key]?.let { text ->
+        val decoded = prefs[key]?.let { text ->
             runCatching { json.decodeFromString<RangeReport>(text) }.getOrNull()
-        } ?: RangeReport()
+        }
+        (decoded ?: RangeReport()).migrated()
     }
 
     suspend fun update(transform: (RangeReport) -> RangeReport) {
