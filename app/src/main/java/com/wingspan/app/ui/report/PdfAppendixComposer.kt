@@ -12,9 +12,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Renders the "Model and assumptions" appendix as page 2 of the exported PDF. The caller owns the
- * [PdfDocument] (creation, [PdfDocument.writeTo] and [PdfDocument.close]); this object only starts
- * and finishes the one page it draws.
+ * Renders the "Model and assumptions" appendix as the last page of the exported PDF. The caller
+ * owns the [PdfDocument] (creation, [PdfDocument.writeTo] and [PdfDocument.close]); this object
+ * only starts and finishes the one page it draws.
  */
 object PdfAppendixComposer {
 
@@ -28,11 +28,20 @@ object PdfAppendixComposer {
     private const val BODY_LEADING = 12f
     private const val SECTION_GAP = 10f
 
-    fun writePage(document: PdfDocument, report: RangeReport, settings: LoadSettings, timestampMs: Long) {
-        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH_PT, PAGE_HEIGHT_PT, 2).create()
+    fun writePage(
+        document: PdfDocument,
+        report: RangeReport,
+        settings: LoadSettings,
+        timestampMs: Long,
+        pageNumber: Int,
+        pageCount: Int,
+    ) {
+        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH_PT, PAGE_HEIGHT_PT, pageNumber).create()
         val page = document.startPage(pageInfo)
         val canvas = page.canvas
         val units = settings.unitSystem
+
+        drawPageFooter(canvas, pageNumber, pageCount, timestampMs)
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
@@ -67,7 +76,7 @@ object PdfAppendixComposer {
         canvas.drawText("Model and assumptions", LEFT_X, 72f, titlePaint)
 
         val timestampFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
-        canvas.drawText("Page 2 of 2 · ${timestampFormat.format(Date(timestampMs))}", LEFT_X, 88f, metaPaint)
+        canvas.drawText("Page $pageNumber of $pageCount · ${timestampFormat.format(Date(timestampMs))}", LEFT_X, 88f, metaPaint)
 
         val firstPosition = report.positions.firstOrNull()
         var y = 116f

@@ -11,7 +11,6 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import com.wingspan.app.domain.ballistics.LoadSettings
 import com.wingspan.app.domain.ballistics.UnitSystem
-import com.wingspan.app.domain.ballistics.Units
 import com.wingspan.app.domain.geo.EnuProjection
 import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
@@ -34,10 +33,11 @@ import kotlin.math.hypot
 import kotlin.math.min
 
 /**
- * Renders a [RangeReport] to a single-page PDF via the platform [PdfDocument] API. This is the
- * first page of the report; a future step appends further pages by inserting more work between
- * [PdfDocument.finishPage] and [PdfDocument.writeTo] below, so document ownership (create, write,
- * close) must stay together in this one function.
+ * Renders a [RangeReport] to a multi-page PDF via the platform [PdfDocument] API: a map page,
+ * then a run of table pages built from [ReportTables], then the appendix. This object is the sole
+ * owner of the [PdfDocument] (create, [PdfDocument.writeTo], [PdfDocument.close]); the table and
+ * appendix pages are drawn by [PdfTablesComposer] and [PdfAppendixComposer], each of which only
+ * starts and finishes the one page it is given.
  */
 object PdfReportComposer {
 
@@ -54,11 +54,18 @@ object PdfReportComposer {
         background: Bitmap?,
         timestampMs: Long,
     ) {
+        val units = settings.unitSystem
+        val tables = ReportTables.build(report, units)
+        val tablePages = paginate(tables)
+        val pageCount = 1 + tablePages.size + 1
+        val configLetters = ReportTables.configLetterFor(report)
+
         val document = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH_PT, PAGE_HEIGHT_PT, 1).create()
         val page = document.startPage(pageInfo)
         val canvas = page.canvas
-        val units = settings.unitSystem
+
+        drawPageFooter(canvas, 1, pageCount, timestampMs)
 
         val frame = ReportLayout.frameFor(report)
         if (frame == null) {
@@ -71,7 +78,7 @@ object PdfReportComposer {
             drawZones(canvas, frame, zones)
             drawFansAndArcs(canvas, frame, report)
             drawShots(canvas, frame, report)
-            drawPositionDots(canvas, frame, report)
+            drawPositionDots(canvas, frame, report, configLetters, tables.configs.size)
             drawFanLabels(canvas, frame, report, units)
             drawShotLabels(canvas, frame, report)
             canvas.restore()
@@ -79,10 +86,16 @@ object PdfReportComposer {
             drawScaleBar(canvas, frame, units)
         }
 
-        drawTextBlock(canvas, report, settings, timestampMs, units)
+        drawSummaryBlock(canvas, report, tables, timestampMs)
 
         document.finishPage(page)
-        PdfAppendixComposer.writePage(document, report, settings, timestampMs)
+
+        tablePages.forEachIndexed { index, blocks ->
+            PdfTablesComposer.writePage(document, tables, blocks, pageNumber = 2 + index, pageCount = pageCount, timestampMs = timestampMs)
+        }
+
+        PdfAppendixComposer.writePage(document, report, settings, timestampMs, pageNumber = pageCount, pageCount = pageCount)
+
         document.writeTo(output)
         document.close()
     }
@@ -241,13 +254,24 @@ object PdfReportComposer {
         canvas.drawPath(path, paint)
     }
 
-    private fun drawPositionDots(canvas: Canvas, frame: MapFrame, report: RangeReport) {
+    private fun drawPositionDots(
+        canvas: Canvas,
+        frame: MapFrame,
+        report: RangeReport,
+        configLetters: Map<Long, String>,
+        configCount: Int,
+    ) {
         val dotPaint = fillPaint("#6A1B9A")
 
         report.positions.forEachIndexed { index, position ->
             val (x, y) = pagePoint(frame, position.position)
             canvas.drawCircle(x, y, 4f, dotPaint)
-            drawLabel(canvas, x + 6f, y - 6f, "P${index + 1}", Paint.Align.LEFT)
+            val label = if (configCount > 1) {
+                "P${index + 1} · ${configLetters[position.id] ?: ""}"
+            } else {
+                "P${index + 1}"
+            }
+            drawLabel(canvas, x + 6f, y - 6f, label, Paint.Align.LEFT)
             if (position.fans.any { it.fullCircle }) {
                 drawLabel(canvas, x + 6f, y + 4f, "Clear in all directions", Paint.Align.LEFT)
             }
@@ -285,6 +309,7 @@ object PdfReportComposer {
     }
 
     private fun drawShotLabels(canvas: Canvas, frame: MapFrame, report: RangeReport) {
+        var shotNumber = 1
         for (position in report.positions) {
             for (shot in position.shots) {
                 val (ox, oy) = pagePoint(frame, position.position)
@@ -296,11 +321,12 @@ object PdfReportComposer {
 
                 val magBearing = trueToMagnetic(shot.bearingTrueDeg, position.declinationDeg)
                 val text = if (shot.label.isNotEmpty()) {
-                    "${Formatters.bearing(magBearing)} ${shot.label}"
+                    "$shotNumber: ${Formatters.bearing(magBearing)} ${shot.label}"
                 } else {
-                    Formatters.bearing(magBearing)
+                    "$shotNumber: ${Formatters.bearing(magBearing)}"
                 }
                 drawLabel(canvas, lx, ly, text)
+                shotNumber++
             }
         }
     }
@@ -392,12 +418,11 @@ object PdfReportComposer {
     // Text block
     // ---------------------------------------------------------------------
 
-    private fun drawTextBlock(
+    private fun drawSummaryBlock(
         canvas: Canvas,
         report: RangeReport,
-        settings: LoadSettings,
+        tables: ReportTables,
         timestampMs: Long,
-        units: UnitSystem,
     ) {
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
@@ -412,80 +437,60 @@ object PdfReportComposer {
             typeface = Typeface.SANS_SERIF
         }
 
+        val leftX = 36f
         val titleY = 596f
+        canvas.drawText("Wingspan range report", leftX, titleY, titlePaint)
+
         val timestampY = titleY + 16f
-        canvas.drawText("Wingspan range report", 36f, titleY, titlePaint)
-
         val timestampFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
-        canvas.drawText(timestampFormat.format(Date(timestampMs)), 36f, timestampY, bodyPaint)
+        canvas.drawText(timestampFormat.format(Date(timestampMs)), leftX, timestampY, bodyPaint)
 
-        val firstPosition = report.positions.firstOrNull()
-        val maxRangeM = firstPosition?.maxRangeM ?: 0.0
-        val fanRangeM = firstPosition?.fanRangeM ?: 0.0
-        val effectiveRangeM = firstPosition?.effectiveRangeM ?: 0.0
-        val windBufferM = firstPosition?.windBufferM ?: 0.0
-        val energyThresholdJoules = Units.ftLbfToJoules(settings.energyThresholdFtLbf)
+        val summaryY = timestampY + 16f
+        val configCount = tables.configs.size
+        val summaryLine =
+            "${report.positions.size} positions · ${report.totalShots} shots · $configCount load configuration(s)"
+        canvas.drawText(summaryLine, leftX, summaryY, bodyPaint)
 
-        val summaryItems = listOf(
-            "Shot size" to settings.shotSize.label,
-            "Pellet material" to settings.material.label,
-            "Muzzle velocity" to Formatters.velocity(settings.muzzleVelocityFps, units),
-            "Choke" to settings.choke.label,
-            "Min. pellet energy" to Formatters.energy(energyThresholdJoules, units),
-            "Wind speed" to Formatters.windSpeed(settings.windSpeedMph, units),
-            "Wind buffer" to Formatters.distance(windBufferM, units),
-            "Maximum range" to Formatters.distance(maxRangeM, units),
-            "Fan radius" to Formatters.distance(fanRangeM, units),
-            "Effective range" to Formatters.distance(effectiveRangeM, units),
-            "Unit system" to unitSystemLabel(units),
-            "Positions" to report.positions.size.toString(),
-            "Shots" to report.totalShots.toString(),
-        )
-
-        val blockStartY = timestampY + 16f
-        val rowLeading = 12f
-        val rowCount = (summaryItems.size + 1) / 2
-        val leftLabelX = 36f
-        val rightLabelX = 324f
-
-        for (row in 0 until rowCount) {
-            val y = blockStartY + row * rowLeading
-            summaryItems.getOrNull(row * 2)?.let { (label, value) ->
-                canvas.drawText("$label: $value", leftLabelX, y, bodyPaint)
-            }
-            summaryItems.getOrNull(row * 2 + 1)?.let { (label, value) ->
-                canvas.drawText("$label: $value", rightLabelX, y, bodyPaint)
-            }
+        var y = summaryY
+        if (configCount == 1) {
+            y += 14f
+            val cells = tables.configs[0].cells
+            // Shot, material, velocity, choke, wind (indices per ReportTables.cellsFor).
+            val loadLine = "${cells[0]} · ${cells[1]} · ${cells[2]} · ${cells[3]} · ${cells[5]}"
+            canvas.drawText(loadLine, leftX, y, bodyPaint)
         }
 
-        var y = blockStartY + rowCount * rowLeading + rowLeading
-        val positions = report.positions
-        for ((index, position) in positions.withIndex()) {
-            if (y > 756f) {
-                canvas.drawText("... and ${positions.size - index} more", leftLabelX, y, bodyPaint)
-                break
-            }
-            val coords = "%.5f, %.5f".format(position.position.lat, position.position.lon)
-            val fansText = if (position.fans.isEmpty()) {
-                "none"
-            } else {
-                position.fans.joinToString(", ") { fan ->
-                    if (fan.fullCircle) {
-                        "all directions"
-                    } else {
-                        "${Formatters.bearing(fan.leftMagDeg)}-${Formatters.bearing(fan.rightMagDeg)}"
-                    }
-                }
-            }
-            val line = "P${index + 1}: $coords · ${position.positionSource} · Fans: $fansText"
-            canvas.drawText(line, leftLabelX, y, bodyPaint)
-            y += rowLeading
-        }
+        y += 18f
+        val note = "Bearings are magnetic. Positions, load configurations and shots are tabulated on the " +
+            "following pages; the model and its assumptions are on the last page."
+        drawWrapped(canvas, note, bodyPaint, leftX, y, 540f, 12f)
     }
 
-    private fun unitSystemLabel(units: UnitSystem): String = when (units) {
-        UnitSystem.IMPERIAL -> "Imperial"
-        UnitSystem.METRIC -> "Metric"
+    private fun drawWrapped(
+        canvas: Canvas,
+        text: String,
+        paint: Paint,
+        x: Float,
+        y: Float,
+        maxWidth: Float,
+        leading: Float,
+    ) {
+        val words = text.split(" ")
+        var cursorY = y
+        var line = StringBuilder()
+        for (word in words) {
+            val candidate = if (line.isEmpty()) word else "$line $word"
+            if (line.isNotEmpty() && paint.measureText(candidate) > maxWidth) {
+                canvas.drawText(line.toString(), x, cursorY, paint)
+                cursorY += leading
+                line = StringBuilder(word)
+            } else {
+                line = StringBuilder(candidate)
+            }
+        }
+        if (line.isNotEmpty()) {
+            canvas.drawText(line.toString(), x, cursorY, paint)
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -520,4 +525,22 @@ object PdfReportComposer {
         color = Color.parseColor(colorHex)
         strokeWidth = widthPt
     }
+}
+
+/**
+ * Draws the "Page k of N · <timestamp>" line every page in the export carries in its top margin.
+ * Shared by [PdfReportComposer], [PdfTablesComposer] and [PdfAppendixComposer], which each own a
+ * different page of the same document.
+ */
+internal fun drawPageFooter(canvas: Canvas, pageNumber: Int, pageCount: Int, timestampMs: Long) {
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.parseColor("#616161")
+        textSize = 9f
+        typeface = Typeface.SANS_SERIF
+        textAlign = Paint.Align.RIGHT
+    }
+    val timestampFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
+    val text = "Page $pageNumber of $pageCount · ${timestampFormat.format(Date(timestampMs))}"
+    canvas.drawText(text, 576f, 24f, paint)
 }
