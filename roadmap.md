@@ -1201,7 +1201,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and `ReportTest` passes. **(manual, on device)**: with wind set, a recorded shot's purple ray ends exactly on the fan's outer arc.
 
-- [ ] **WS-11.4** Record load settings per position and add one-tap shot recording to the report model (Commit: )
+- [x] **WS-11.4** Record load settings per position and add one-tap shot recording to the report model (Commit: )
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/domain/geo/EnuProjection.kt, app/src/main/java/com/wingspan/app/domain/geo/Geometry2D.kt, app/src/test/java/com/wingspan/app/domain/report/ReportTest.kt
   - **Edit:** app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/test/java/com/wingspan/app/domain/report/ReportTest.kt
