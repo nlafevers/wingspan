@@ -1233,7 +1233,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds. **(manual, on device)**: in report mode the manual-position, recenter and snapshot buttons are visible and work above the panel. The first tap creates P1 and a ray. Further taps without moving add to P1. Long-press in manual mode and then tap creates P2. Changing the choke in Settings and tapping again creates P3. "Clear" and "Delete" ask first. Shots survive a force-stop.
 
-- [x] **WS-11.6** Build the report tables and their pagination as pure Kotlin (Commit: )
+- [x] **WS-11.6** Build the report tables and their pagination as pure Kotlin (Commit: a66764a)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/domain/report/Report.kt, app/src/main/java/com/wingspan/app/ui/Formatters.kt, app/src/main/java/com/wingspan/app/ui/report/AppendixText.kt, app/src/main/java/com/wingspan/app/domain/ballistics/LoadSettings.kt, app/src/main/java/com/wingspan/app/domain/ballistics/Units.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/ReportTables.kt, app/src/test/java/com/wingspan/app/ui/report/ReportTablesTest.kt
