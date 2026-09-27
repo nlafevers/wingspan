@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,11 +26,13 @@ import kotlinx.coroutines.withContext
 
 class SettingsViewModel(private val settingsRepository: SettingsRepository) : ViewModel() {
 
-    val settings: StateFlow<LoadSettings> = settingsRepository.settings
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LoadSettings())
+    // Null until DataStore emits, so the screen can tell "not loaded yet" apart from "loaded
+    // defaults" and only seed its text fields once the stored values are known.
+    val settings: StateFlow<LoadSettings?> = settingsRepository.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val preview: StateFlow<RangeResult?> = settings.mapLatest {
+    val preview: StateFlow<RangeResult?> = settings.filterNotNull().mapLatest {
         withContext(Dispatchers.Default) {
             // A custom diameter/density of exactly zero (or negative) fails Pellet's own
             // validation. That shouldn't reach here anymore now that the custom fields reject

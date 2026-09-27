@@ -1,6 +1,8 @@
 package com.wingspan.app.ui.settings
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -9,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -29,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,7 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wingspan.app.appContainer
 import com.wingspan.app.domain.ballistics.Choke
+import com.wingspan.app.domain.ballistics.LoadSettings
 import com.wingspan.app.domain.ballistics.PelletMaterial
+import com.wingspan.app.domain.ballistics.RangeResult
 import com.wingspan.app.domain.ballistics.ShotSize
 import com.wingspan.app.domain.ballistics.UnitSystem
 import com.wingspan.app.ui.Formatters
@@ -110,6 +116,49 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val preview by viewModel.preview.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Load settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        val loaded = settings
+        if (loaded == null) {
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            // SettingsForm only enters composition once DataStore has emitted, so its remember
+            // initialisers seed the text fields from the stored values rather than the defaults.
+            SettingsForm(
+                settings = loaded,
+                preview = preview,
+                viewModel = viewModel,
+                modifier = Modifier.padding(padding),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsForm(
+    settings: LoadSettings,
+    preview: RangeResult?,
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier,
+) {
     val units = settings.unitSystem
     val velocitySuffix = if (units == UnitSystem.IMPERIAL) "fps" else "m/s"
     val windSuffix = if (units == UnitSystem.IMPERIAL) "mph" else "m/s"
@@ -131,145 +180,131 @@ fun SettingsScreen(
         mutableStateOf(Formatters.mphToWindInput(settings.windSpeedMph, units))
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Load settings") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            EnumDropdown(
-                label = "Shot size",
-                options = ShotSize.values().toList(),
-                selected = settings.shotSize,
-                labelOf = ShotSize::label,
-                onSelect = viewModel::setShotSize,
-            )
+    Column(
+        modifier = modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        EnumDropdown(
+            label = "Shot size",
+            options = ShotSize.values().toList(),
+            selected = settings.shotSize,
+            labelOf = ShotSize::label,
+            onSelect = viewModel::setShotSize,
+        )
 
-            if (settings.shotSize == ShotSize.CUSTOM) {
-                NumericField(
-                    label = "Pellet diameter (in)",
-                    value = diameterText,
-                    onValueChange = { text ->
-                        diameterText = text
-                        // Pellet requires a strictly positive diameter; "0", "0.", or "0.0" are
-                        // valid Doubles that parse cleanly while backspacing a value toward empty,
-                        // and pushing that zero through crashes the reactive range preview (and
-                        // persists a value that crashes on every subsequent launch too).
-                        text.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { viewModel.setCustomDiameterInches(it) }
-                    },
-                )
-            }
-
-            EnumDropdown(
-                label = "Pellet material",
-                options = PelletMaterial.values().toList(),
-                selected = settings.material,
-                labelOf = PelletMaterial::label,
-                onSelect = viewModel::setMaterial,
-            )
-
-            if (settings.material == PelletMaterial.CUSTOM) {
-                NumericField(
-                    label = "Pellet density (g/cc)",
-                    value = densityText,
-                    onValueChange = { text ->
-                        densityText = text
-                        // Same zero-during-backspace hazard as diameter above.
-                        text.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { viewModel.setCustomDensityGcc(it) }
-                    },
-                )
-            }
-
-            EnumDropdown(
-                label = "Choke",
-                options = Choke.values().toList(),
-                selected = settings.choke,
-                labelOf = Choke::label,
-                onSelect = viewModel::setChoke,
-            )
-
+        if (settings.shotSize == ShotSize.CUSTOM) {
             NumericField(
-                label = "Muzzle velocity",
-                value = velocityText,
+                label = "Pellet diameter (in)",
+                value = diameterText,
                 onValueChange = { text ->
-                    velocityText = text
-                    Formatters.velocityInputToFps(text, units)?.let { viewModel.setMuzzleVelocityFps(it) }
+                    diameterText = text
+                    // Pellet requires a strictly positive diameter; "0", "0.", or "0.0" are
+                    // valid Doubles that parse cleanly while backspacing a value toward empty,
+                    // and pushing that zero through crashes the reactive range preview (and
+                    // persists a value that crashes on every subsequent launch too).
+                    text.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { viewModel.setCustomDiameterInches(it) }
                 },
-                suffix = velocitySuffix,
             )
+        }
 
+        EnumDropdown(
+            label = "Pellet material",
+            options = PelletMaterial.values().toList(),
+            selected = settings.material,
+            labelOf = PelletMaterial::label,
+            onSelect = viewModel::setMaterial,
+        )
+
+        if (settings.material == PelletMaterial.CUSTOM) {
             NumericField(
-                label = "Minimum pellet energy (ft·lbf)",
-                value = energyThresholdText,
+                label = "Pellet density (g/cc)",
+                value = densityText,
                 onValueChange = { text ->
-                    energyThresholdText = text
-                    text.toDoubleOrNull()?.let { viewModel.setEnergyThresholdFtLbf(it) }
+                    densityText = text
+                    // Same zero-during-backspace hazard as diameter above.
+                    text.toDoubleOrNull()?.takeIf { it > 0.0 }?.let { viewModel.setCustomDensityGcc(it) }
                 },
             )
+        }
 
-            NumericField(
-                label = "Wind speed",
-                value = windText,
-                onValueChange = { text ->
-                    windText = text
-                    Formatters.windInputToMph(text, units)?.let { viewModel.setWindSpeedMph(it) }
-                },
-                suffix = windSuffix,
-            )
+        EnumDropdown(
+            label = "Choke",
+            options = Choke.values().toList(),
+            selected = settings.choke,
+            labelOf = Choke::label,
+            onSelect = viewModel::setChoke,
+        )
 
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                UnitSystem.values().forEachIndexed { index, option ->
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = UnitSystem.values().size),
-                        selected = units == option,
-                        onClick = { viewModel.setUnitSystem(option) },
-                    ) {
-                        Text(if (option == UnitSystem.IMPERIAL) "Imperial" else "Metric")
-                    }
+        NumericField(
+            label = "Muzzle velocity",
+            value = velocityText,
+            onValueChange = { text ->
+                velocityText = text
+                Formatters.velocityInputToFps(text, units)?.let { viewModel.setMuzzleVelocityFps(it) }
+            },
+            suffix = velocitySuffix,
+        )
+
+        NumericField(
+            label = "Minimum pellet energy (ft·lbf)",
+            value = energyThresholdText,
+            onValueChange = { text ->
+                energyThresholdText = text
+                text.toDoubleOrNull()?.let { viewModel.setEnergyThresholdFtLbf(it) }
+            },
+        )
+
+        NumericField(
+            label = "Wind speed",
+            value = windText,
+            onValueChange = { text ->
+                windText = text
+                Formatters.windInputToMph(text, units)?.let { viewModel.setWindSpeedMph(it) }
+            },
+            suffix = windSuffix,
+        )
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            UnitSystem.values().forEachIndexed { index, option ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = UnitSystem.values().size),
+                    selected = units == option,
+                    onClick = { viewModel.setUnitSystem(option) },
+                ) {
+                    Text(if (option == UnitSystem.IMPERIAL) "Imperial" else "Metric")
                 }
             }
+        }
 
-            preview?.let { result ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Computed ranges",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            "Maximum range: ${Formatters.distance(result.maxRangeM, units)} at " +
-                                "${Formatters.angle(result.optimalAngleDeg)} launch angle",
-                        )
-                        Text(
-                            "Effective range: ${Formatters.distance(result.effectiveRangeM, units)} " +
-                                "(${result.effectiveRangeLimiter}-limited)",
-                        )
-                        Text(
-                            "Muzzle energy per pellet: ${Formatters.energy(result.muzzleEnergyJ, units)}",
-                        )
-                        Text(
-                            "Wind buffer: +${Formatters.distance(result.windBufferM, units)}",
-                        )
-                        Text(
-                            "Fan radius: ${Formatters.distance(result.fanRangeM, units)}",
-                        )
-                        Text(
-                            "Fans are drawn at the fan radius and every no-fire zone is widened by the wind buffer",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+        preview?.let { result ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Computed ranges",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        "Maximum range: ${Formatters.distance(result.maxRangeM, units)} at " +
+                            "${Formatters.angle(result.optimalAngleDeg)} launch angle",
+                    )
+                    Text(
+                        "Effective range: ${Formatters.distance(result.effectiveRangeM, units)} " +
+                            "(${result.effectiveRangeLimiter}-limited)",
+                    )
+                    Text(
+                        "Muzzle energy per pellet: ${Formatters.energy(result.muzzleEnergyJ, units)}",
+                    )
+                    Text(
+                        "Wind buffer: +${Formatters.distance(result.windBufferM, units)}",
+                    )
+                    Text(
+                        "Fan radius: ${Formatters.distance(result.fanRangeM, units)}",
+                    )
+                    Text(
+                        "Fans are drawn at the fan radius and every no-fire zone is widened by the wind buffer",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }

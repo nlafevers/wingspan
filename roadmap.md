@@ -1177,7 +1177,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and all tests pass, including the new ones. **(manual, on device)**: with no zones within range, a green full-circle fan and its dashed effective-range ring are drawn around the position.
 
-- [ ] **WS-11.2** Show the stored values in the Settings form (Commit: )
+- [x] **WS-11.2** Show the stored values in the Settings form (Commit: )
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/settings/SettingsScreen.kt, app/src/main/java/com/wingspan/app/ui/settings/SettingsViewModel.kt, app/src/main/java/com/wingspan/app/data/SettingsRepository.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/settings/SettingsViewModel.kt, app/src/main/java/com/wingspan/app/ui/settings/SettingsScreen.kt
