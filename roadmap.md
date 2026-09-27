@@ -1264,7 +1264,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and `ReportTablesTest` passes.
 
-- [ ] **WS-11.7** Rebuild the PDF as a map page, table pages and the appendix (Commit: )
+- [x] **WS-11.7** Rebuild the PDF as a map page, table pages and the appendix (Commit: 1c49eb1)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/report/PdfReportComposer.kt, app/src/main/java/com/wingspan/app/ui/report/PdfAppendixComposer.kt, app/src/main/java/com/wingspan/app/ui/report/ReportTables.kt, app/src/main/java/com/wingspan/app/ui/report/ReportViewModel.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/PdfReportComposer.kt, app/src/main/java/com/wingspan/app/ui/report/PdfTablesComposer.kt, app/src/main/java/com/wingspan/app/ui/report/PdfAppendixComposer.kt
