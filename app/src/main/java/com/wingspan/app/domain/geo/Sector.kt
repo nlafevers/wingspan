@@ -1,5 +1,7 @@
 package com.wingspan.app.domain.geo
 
+import kotlin.math.abs
+
 object Sector {
 
     fun arcPoints(
@@ -10,7 +12,7 @@ object Sector {
         stepDeg: Double = 1.0,
     ): List<LatLon> {
         val proj = EnuProjection(origin)
-        val isFullCircle = leftDeg == rightDeg
+        val isFullCircle = isFullCircle(leftDeg, rightDeg)
         val left = if (isFullCircle) 0.0 else leftDeg
         val width = if (isFullCircle) 360.0 else Geometry2D.normalizeBearing(rightDeg - leftDeg)
 
@@ -34,7 +36,7 @@ object Sector {
         stepDeg: Double = 1.0,
     ): List<LatLon> {
         val arc = arcPoints(origin, leftDeg, rightDeg, radiusM, stepDeg)
-        return if (leftDeg == rightDeg) {
+        return if (isFullCircle(leftDeg, rightDeg)) {
             arc
         } else {
             listOf(origin) + arc + listOf(origin)
@@ -43,4 +45,9 @@ object Sector {
 
     fun circleOutline(center: LatLon, radiusM: Double, stepDeg: Double = 5.0): List<LatLon> =
         arcPoints(center, 0.0, 0.0, radiusM, stepDeg)
+
+    // FanCalculator emits an unobstructed field of fire as 0.0..360.0, which normalises to a
+    // zero width, so equal bearings alone would miss it and collapse the circle to one spoke.
+    private fun isFullCircle(leftDeg: Double, rightDeg: Double): Boolean =
+        leftDeg == rightDeg || abs(rightDeg - leftDeg) >= 360.0
 }

@@ -123,6 +123,31 @@ class FanCalculatorTest {
         assertEquals(origin, outline.last())
     }
 
+    private fun assertFullRing(outline: List<LatLon>, radiusM: Double) {
+        assertTrue(outline.size >= 360)
+        assertFalse(outline.contains(origin))
+        for (point in outline) {
+            assertEquals(radiusM, proj.toEnu(point).length, 0.5)
+        }
+    }
+
+    @Test
+    fun fullCircleSectorOutlineIsARing() {
+        assertFullRing(Sector.sectorOutline(origin, 0.0, 360.0, 100.0), 100.0)
+    }
+
+    @Test
+    fun fullCircleArcPointsIsARing() {
+        assertFullRing(Sector.arcPoints(origin, 0.0, 360.0, 50.0), 50.0)
+    }
+
+    @Test
+    fun unobstructedFanDrawsAsFullRing() {
+        val fan = FanCalculator.compute(origin, maxRangeM = 300.0, zones = emptyList()).fans.single()
+
+        assertFullRing(Sector.sectorOutline(origin, fan.leftTrueDeg, fan.rightTrueDeg, 300.0), 300.0)
+    }
+
     private fun bearingInFan(bearing: Double, fan: Fan): Boolean {
         if (fan.fullCircle) return true
         return if (fan.leftTrueDeg <= fan.rightTrueDeg) {
