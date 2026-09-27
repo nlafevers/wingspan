@@ -10,9 +10,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wingspan.app.AppContainer
 import com.wingspan.app.data.ReportRepository
+import com.wingspan.app.data.SettingsRepository
 import com.wingspan.app.data.map.Basemap
 import com.wingspan.app.domain.ballistics.LoadSettings
-import com.wingspan.app.domain.geo.EnuProjection
 import com.wingspan.app.domain.geo.Geometry2D
 import com.wingspan.app.domain.geo.LatLon
 import com.wingspan.app.domain.geo.NoFireZone
@@ -20,22 +20,25 @@ import com.wingspan.app.domain.report.RangeReport
 import com.wingspan.app.domain.report.ReportFan
 import com.wingspan.app.domain.report.ReportLayout
 import com.wingspan.app.domain.report.ReportPosition
-import com.wingspan.app.domain.report.ReportShot
+import com.wingspan.app.domain.report.recordShot
 import com.wingspan.app.ui.map.FanUiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.atan2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ReportViewModel(private val reportRepository: ReportRepository) : ViewModel() {
+class ReportViewModel(
+    private val reportRepository: ReportRepository,
+    private val settingsRepository: SettingsRepository,
+) : ViewModel() {
 
     val report: StateFlow<RangeReport> = reportRepository.report
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RangeReport())
@@ -54,39 +57,43 @@ class ReportViewModel(private val reportRepository: ReportRepository) : ViewMode
         activePositionId.value = id
     }
 
-    fun addPosition(state: FanUiState) {
-        val id = System.currentTimeMillis()
-        val newPosition = ReportPosition(
-            id = id,
-            timestampMs = id,
-            position = state.origin,
-            positionSource = state.source.name,
-            maxRangeM = state.range.maxRangeM,
-            effectiveRangeM = state.range.effectiveRangeM,
-            windBufferM = state.range.windBufferM,
-            declinationDeg = state.declinationDeg,
-            accuracyM = state.accuracyM,
-            effectiveRangeLimiter = state.range.effectiveRangeLimiter,
-            fans = state.fans.map { fanView ->
-                ReportFan(
-                    leftTrueDeg = fanView.fan.leftTrueDeg,
-                    rightTrueDeg = fanView.fan.rightTrueDeg,
-                    leftMagDeg = fanView.leftMagDeg,
-                    rightMagDeg = fanView.rightMagDeg,
-                    fullCircle = fanView.fan.fullCircle,
-                )
-            },
-        )
-        viewModelScope.launch { reportRepository.update { it.withPosition(newPosition) } }
-        activePositionId.value = newPosition.id
-    }
-
-    fun addShotAt(positionId: Long, tap: LatLon) {
-        val position = report.value.positions.find { it.id == positionId } ?: return
-        val enu = EnuProjection(position.position).toEnu(tap)
-        val bearing = Geometry2D.normalizeBearing(Math.toDegrees(atan2(enu.x, enu.y)))
+    /**
+     * Records a shot towards [tap] from [state]'s position. The load settings
+     * are read from the repository so a shot is never stamped with defaults.
+     */
+    fun recordShot(state: FanUiState, tap: LatLon) {
         viewModelScope.launch {
-            reportRepository.update { it.withShot(positionId, ReportShot(bearingTrueDeg = bearing)) }
+            val settings = settingsRepository.settings.first()
+            val id = System.currentTimeMillis()
+            val candidate = ReportPosition(
+                id = id,
+                timestampMs = id,
+                position = state.origin,
+                positionSource = state.source.name,
+                maxRangeM = state.range.maxRangeM,
+                effectiveRangeM = state.range.effectiveRangeM,
+                windBufferM = state.range.windBufferM,
+                declinationDeg = state.declinationDeg,
+                accuracyM = state.accuracyM,
+                effectiveRangeLimiter = state.range.effectiveRangeLimiter,
+                fans = state.fans.map { fanView ->
+                    ReportFan(
+                        leftTrueDeg = fanView.fan.leftTrueDeg,
+                        rightTrueDeg = fanView.fan.rightTrueDeg,
+                        leftMagDeg = fanView.leftMagDeg,
+                        rightMagDeg = fanView.rightMagDeg,
+                        fullCircle = fanView.fan.fullCircle,
+                    )
+                },
+                settings = settings,
+            )
+            var receiverId: Long? = null
+            reportRepository.update { report ->
+                report.recordShot(candidate, tap, System.currentTimeMillis())
+                    .also { receiverId = it.second }
+                    .first
+            }
+            receiverId?.let { activePositionId.value = it }
         }
     }
 
@@ -115,8 +122,9 @@ class ReportViewModel(private val reportRepository: ReportRepository) : ViewMode
         viewModelScope.launch { reportRepository.update { it.removeShot(positionId, index) } }
     }
 
-    fun removePosition(id: Long) {
+    fun deletePosition(id: Long) {
         viewModelScope.launch { reportRepository.update { it.removePosition(id) } }
+        if (activePositionId.value == id) activePositionId.value = null
     }
 
     fun clearReport() {
@@ -159,7 +167,7 @@ class ReportViewModel(private val reportRepository: ReportRepository) : ViewMode
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { ReportViewModel(container.reportRepository) }
+            initializer { ReportViewModel(container.reportRepository, container.settingsRepository) }
         }
     }
 }

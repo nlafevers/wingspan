@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -114,6 +115,8 @@ fun MapScreen(
     val reportMode by reportViewModel.reportMode.collectAsStateWithLifecycle()
     val activePositionId by reportViewModel.activePositionId.collectAsStateWithLifecycle()
     var pendingShotEdit by remember { mutableStateOf<Pair<Long, Int>?>(null) }
+    var confirmClearReport by remember { mutableStateOf(false) }
+    var pendingDeletePositionId by remember { mutableStateOf<Long?>(null) }
 
     val settingsRepository = context.appContainer().settingsRepository
     val currentSettings by settingsRepository.settings.collectAsStateWithLifecycle(initialValue = LoadSettings())
@@ -203,11 +206,11 @@ fun MapScreen(
             when {
                 editorMode !is EditorViewModel.EditorMode.Idle -> editorViewModel.onMapTap(hit.position)
                 reportMode -> {
-                    val posId = activePositionId
-                    if (posId != null) {
-                        reportViewModel.addShotAt(posId, hit.position)
+                    val state = fanState
+                    if (state != null) {
+                        reportViewModel.recordShot(state, hit.position)
                     } else {
-                        toast("Add a firing position first")
+                        toast("Waiting for a position - turn on manual mode or wait for GPS")
                     }
                 }
                 hit.zoneId != null -> editorViewModel.onTap(hit, zones)
@@ -343,114 +346,113 @@ fun MapScreen(
                 }
             }
         }
-        Column(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
-            if (editorMode is EditorViewModel.EditorMode.Idle && !reportMode) {
-                Box {
-                    FloatingActionButton(onClick = { addMenuExpanded = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add zone")
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp)) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Column(horizontalAlignment = Alignment.End) {
+                    if (editorMode is EditorViewModel.EditorMode.Idle && !reportMode) {
+                        Box {
+                            FloatingActionButton(onClick = { addMenuExpanded = true }) {
+                                Icon(Icons.Default.Add, contentDescription = "Add zone")
+                            }
+                            DropdownMenu(
+                                expanded = addMenuExpanded,
+                                onDismissRequest = { addMenuExpanded = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("No-fire polygon") },
+                                    onClick = {
+                                        addMenuExpanded = false
+                                        editorViewModel.startPolygon()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("No-fire marker") },
+                                    onClick = {
+                                        addMenuExpanded = false
+                                        editorViewModel.startMarker()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("No-fire line") },
+                                    onClick = {
+                                        addMenuExpanded = false
+                                        editorViewModel.startLine()
+                                    },
+                                )
+                            }
+                        }
                     }
-                    DropdownMenu(
-                        expanded = addMenuExpanded,
-                        onDismissRequest = { addMenuExpanded = false },
+                    SmallFloatingActionButton(
+                        onClick = { viewModel.toggleManualMode() },
+                        containerColor = if (manualMode) {
+                            MaterialTheme.colorScheme.tertiaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        modifier = Modifier.padding(top = 8.dp),
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("No-fire polygon") },
-                            onClick = {
-                                addMenuExpanded = false
-                                editorViewModel.startPolygon()
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("No-fire marker") },
-                            onClick = {
-                                addMenuExpanded = false
-                                editorViewModel.startMarker()
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("No-fire line") },
-                            onClick = {
-                                addMenuExpanded = false
-                                editorViewModel.startLine()
-                            },
-                        )
+                        Icon(Icons.Default.Edit, contentDescription = "Manual position")
+                    }
+                    SmallFloatingActionButton(
+                        onClick = { viewModel.recenter() },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Icon(Icons.Default.Place, contentDescription = "Recenter")
+                    }
+                    val canSnapshot = currentFanState != null && editorMode is EditorViewModel.EditorMode.Idle
+                    SmallFloatingActionButton(
+                        onClick = {
+                            if (canSnapshot) {
+                                controller.captureBitmap { bitmap ->
+                                    pendingPng = SnapshotCapture.toPng(bitmap)
+                                    showNotesDialog = true
+                                }
+                            }
+                        },
+                        containerColor = if (canSnapshot) {
+                            MaterialTheme.colorScheme.surface
+                        } else {
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                        },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Icon(Icons.Default.Star, contentDescription = "Snapshot")
                     }
                 }
             }
-            SmallFloatingActionButton(
-                onClick = { viewModel.toggleManualMode() },
-                containerColor = if (manualMode) {
-                    MaterialTheme.colorScheme.tertiaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Manual position")
-            }
-            SmallFloatingActionButton(
-                onClick = { viewModel.recenter() },
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Icon(Icons.Default.Place, contentDescription = "Recenter")
-            }
-            val canSnapshot = currentFanState != null && editorMode is EditorViewModel.EditorMode.Idle
-            SmallFloatingActionButton(
-                onClick = {
-                    if (canSnapshot) {
-                        controller.captureBitmap { bitmap ->
-                            pendingPng = SnapshotCapture.toPng(bitmap)
-                            showNotesDialog = true
-                        }
-                    }
-                },
-                containerColor = if (canSnapshot) {
-                    MaterialTheme.colorScheme.surface
-                } else {
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-                },
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Icon(Icons.Default.Star, contentDescription = "Snapshot")
-            }
-        }
 
-        if (editorMode !is EditorViewModel.EditorMode.Idle) {
-            Box(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
-                EditorControls(
-                    mode = editorMode,
-                    canFinish = canFinishEditor,
-                    onUndo = { editorViewModel.undoLastVertex() },
-                    onDeletePoint = { editorViewModel.deleteSelectedVertex() },
-                    onCancel = { editorViewModel.cancel() },
-                    onFinish = { editorViewModel.requestFinish() },
-                    onRadiusChange = { r ->
-                        when (editorMode) {
-                            is EditorViewModel.EditorMode.MarkerEdit -> editorViewModel.setMarkerRadius(r)
-                            is EditorViewModel.EditorMode.LineEdit -> editorViewModel.setLineBuffer(r)
-                            else -> Unit
-                        }
-                    },
-                )
-            }
-        }
-
-        if (reportMode) {
-            Box(Modifier.align(Alignment.BottomCenter).padding(16.dp)) {
-                ReportControls(
-                    report = report,
-                    activePositionId = activePositionId,
-                    canAddPosition = currentFanState != null,
-                    onAddPosition = { currentFanState?.let { reportViewModel.addPosition(it) } },
-                    onSelectPosition = { reportViewModel.selectPosition(it) },
-                    onEditShot = { positionId, shotIndex -> pendingShotEdit = positionId to shotIndex },
-                    onClear = { reportViewModel.clearReport() },
-                    onExport = { pdfExportLauncher.launch(reportViewModel.suggestedPdfName()) },
-                    onExit = { reportViewModel.setReportMode(false) },
-                )
+            if (editorMode !is EditorViewModel.EditorMode.Idle) {
+                Box(Modifier.padding(top = 8.dp)) {
+                    EditorControls(
+                        mode = editorMode,
+                        canFinish = canFinishEditor,
+                        onUndo = { editorViewModel.undoLastVertex() },
+                        onDeletePoint = { editorViewModel.deleteSelectedVertex() },
+                        onCancel = { editorViewModel.cancel() },
+                        onFinish = { editorViewModel.requestFinish() },
+                        onRadiusChange = { r ->
+                            when (editorMode) {
+                                is EditorViewModel.EditorMode.MarkerEdit -> editorViewModel.setMarkerRadius(r)
+                                is EditorViewModel.EditorMode.LineEdit -> editorViewModel.setLineBuffer(r)
+                                else -> Unit
+                            }
+                        },
+                    )
+                }
+            } else if (reportMode) {
+                Box(Modifier.padding(top = 8.dp)) {
+                    ReportControls(
+                        report = report,
+                        activePositionId = activePositionId,
+                        manualMode = manualMode,
+                        onSelectPosition = { reportViewModel.selectPosition(it) },
+                        onEditShot = { positionId, shotIndex -> pendingShotEdit = positionId to shotIndex },
+                        onDeletePosition = { pendingDeletePositionId = it },
+                        onClear = { confirmClearReport = true },
+                        onExport = { pdfExportLauncher.launch(reportViewModel.suggestedPdfName()) },
+                        onExit = { reportViewModel.setReportMode(false) },
+                    )
+                }
             }
         }
 
@@ -600,6 +602,53 @@ fun MapScreen(
                 },
                 onDismiss = { downloadAreaRequest = null },
             )
+        }
+
+        if (confirmClearReport) {
+            AlertDialog(
+                onDismissRequest = { confirmClearReport = false },
+                title = { Text("Clear the whole report?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        reportViewModel.clearReport()
+                        confirmClearReport = false
+                    }) {
+                        Text("Clear")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmClearReport = false }) {
+                        Text("Cancel")
+                    }
+                },
+            )
+        }
+
+        val deletePositionId = pendingDeletePositionId
+        if (deletePositionId != null) {
+            val deleteIndex = report.positions.indexOfFirst { it.id == deletePositionId }
+            val deletePosition = report.positions.getOrNull(deleteIndex)
+            if (deletePosition == null) {
+                pendingDeletePositionId = null
+            } else {
+                AlertDialog(
+                    onDismissRequest = { pendingDeletePositionId = null },
+                    title = { Text("Delete P${deleteIndex + 1} and its ${deletePosition.shots.size} shots?") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            reportViewModel.deletePosition(deletePositionId)
+                            pendingDeletePositionId = null
+                        }) {
+                            Text("Delete")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDeletePositionId = null }) {
+                            Text("Cancel")
+                        }
+                    },
+                )
+            }
         }
 
         val currentShotEdit = pendingShotEdit

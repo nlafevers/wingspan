@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,20 +25,25 @@ import com.wingspan.app.ui.Formatters
 fun ReportControls(
     report: RangeReport,
     activePositionId: Long?,
-    canAddPosition: Boolean,
-    onAddPosition: () -> Unit,
+    manualMode: Boolean,
     onSelectPosition: (Long) -> Unit,
     onEditShot: (Long, Int) -> Unit,
+    onDeletePosition: (Long) -> Unit,
     onClear: () -> Unit,
     onExport: () -> Unit,
     onExit: () -> Unit,
 ) {
-    val activePosition = report.positions.find { it.id == activePositionId }
+    val activeIndex = report.positions.indexOfFirst { it.id == activePositionId }
+    val activePosition = report.positions.getOrNull(activeIndex)
 
     Surface(tonalElevation = 4.dp) {
         Column(modifier = Modifier.padding(8.dp)) {
-            Text("${report.positions.size} positions - ${report.totalShots} shots")
-            Text("Tap the map to record a shot direction from the selected position")
+            Text("${report.positions.size} positions · ${report.totalShots} shots")
+            Text(
+                "Tap to record a shot from your position" +
+                    if (manualMode) " · long-press to move" else "",
+                style = MaterialTheme.typography.bodySmall,
+            )
 
             Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp)) {
                 report.positions.forEachIndexed { index, position ->
@@ -65,9 +71,11 @@ fun ReportControls(
                 }
             }
 
-            Row(modifier = Modifier.padding(top = 4.dp)) {
-                TextButton(onClick = onAddPosition, enabled = canAddPosition) {
-                    Text("Add position")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp)) {
+                if (activePosition != null) {
+                    TextButton(onClick = { onDeletePosition(activePosition.id) }) {
+                        Text("Delete P${activeIndex + 1}")
+                    }
                 }
                 TextButton(onClick = onClear) {
                     Text("Clear")
