@@ -8,8 +8,9 @@ they never cross a user-drawn no-fire zone. It reports each fan's left and right
 magnetic compass bearings, applies a wind safety buffer that grows the fans and the margin
 kept from every zone, and supports offline use in the field: downloadable map areas, a
 manual position override for planning away from the range, timestamped firing-position
-snapshots, and a report mode that records shots during a session and exports a printable
-two-page PDF range report.
+snapshots, and a report mode that records each shot with a single tap and exports a
+printable PDF range report with a map page, tabulated load configurations, positions and
+shots, and a model-and-assumptions appendix.
 
 ## Features
 
@@ -51,15 +52,16 @@ two-page PDF range report.
   position (map image, position, settings, ranges, fans, and notes), browse a list of past
   snapshots, view details, add notes, share a snapshot, show it back on the map, or export
   all snapshots as a zip file.
-- **Report mode with PDF export** — a dedicated mode for recording shots by tapping the
-  map; each tap becomes an editable magnetic bearing from the currently selected firing
-  position, and a report can hold multiple firing positions, each keeping the fans and
-  settings that applied at the moment it was recorded. A report survives an app restart
-  and can be exported as a two-page PDF: a square map page showing every firing position,
-  fan, and shot with bearing labels, a north arrow, a scale bar, and the load settings
-  printed beneath it, followed by a "Model and assumptions" appendix that restates how the
-  model works and records whether each firing position came from a live GPS fix or a
-  manual placement.
+- **Report mode with PDF export** — a dedicated mode for recording shots with a single tap:
+  each tap records a shot from the current firing position, with no separate "Add position"
+  step, and a new firing position is created automatically whenever the shooter moves or the
+  load or fans change. A report can hold multiple firing positions, each keeping the fans and
+  settings that applied when it was recorded, and survives an app restart. It exports as a
+  PDF with a map page (every firing position, fan, and numbered shot with readable labels, a
+  north arrow, a scale bar, and a load summary), a firing-record page tabulating the load
+  configurations, positions, and shots (changed values shown in bold), and a "Model and
+  assumptions" appendix last, which describes each load configuration and records whether
+  each firing position came from a live GPS fix or a manual placement.
 
 ## Building
 
@@ -100,11 +102,14 @@ The following checks should be performed on a physical device before final sign-
 8. Entering a wind speed enlarges the fan radius and widens the gap every fan keeps from
    each no-fire zone; clearing the wind speed restores the previous (unpadded) fans
    exactly.
-9. Report mode records shots by tapping the map, keeps them across an app restart, and
-   exports a two-page PDF: page one's square map shows every firing position, fan, and
-   shot with readable bearing labels and the load settings printed below it; page two is
-   the "Model and assumptions" appendix, and it correctly reports for each firing position
-   whether it came from a live GPS fix or a manual placement.
+9. In report mode the manual-position and recenter buttons stay usable; tapping records a
+   shot from the current position without an "Add position" step, and moving, changing the
+   load, or editing a zone creates a new position automatically. Shot rays end on the fan
+   arc, with or without wind, and shots survive a restart. The exported PDF has the map
+   page (every position, fan, and numbered shot with readable labels), a firing-record
+   page with the configurations, positions, and shots tables (changed values in bold), and
+   the appendix last, which correctly states GPS versus manual for each position and
+   describes each load configuration.
 
 ## Basemap Attributions
 
