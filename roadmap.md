@@ -1296,7 +1296,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and all tests pass. **(manual, on device)**: an exported PDF with two positions under different chokes has a map page labelled "P1 · A", "P2 · B" with numbered shot labels, a "Firing record" page with the three tables and the changed choke and range cells in bold, and the appendix last, with correct "Page k of N" on every page.
 
-- [ ] **WS-11.8** Make the appendix describe every load configuration (Commit: )
+- [x] **WS-11.8** Make the appendix describe every load configuration (Commit: cd656a3)
   - **Repos:** wingspan
   - **Read:** app/src/main/java/com/wingspan/app/ui/report/AppendixText.kt, app/src/test/java/com/wingspan/app/ui/report/AppendixTextTest.kt, app/src/main/java/com/wingspan/app/ui/report/PdfAppendixComposer.kt, app/src/main/java/com/wingspan/app/ui/report/ReportTables.kt
   - **Edit:** app/src/main/java/com/wingspan/app/ui/report/AppendixText.kt, app/src/test/java/com/wingspan/app/ui/report/AppendixTextTest.kt, app/src/main/java/com/wingspan/app/ui/report/PdfAppendixComposer.kt
