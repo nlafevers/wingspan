@@ -94,7 +94,15 @@ object PdfReportComposer {
             PdfTablesComposer.writePage(document, tables, blocks, pageNumber = 2 + index, pageCount = pageCount, timestampMs = timestampMs)
         }
 
-        PdfAppendixComposer.writePage(document, report, settings, timestampMs, pageNumber = pageCount, pageCount = pageCount)
+        PdfAppendixComposer.writePage(
+            document,
+            report,
+            configLetters,
+            units,
+            timestampMs,
+            pageNumber = pageCount,
+            pageCount = pageCount,
+        )
 
         document.writeTo(output)
         document.close()

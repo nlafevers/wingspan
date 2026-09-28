@@ -5,8 +5,10 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import com.wingspan.app.domain.ballistics.LoadSettings
+import com.wingspan.app.domain.ballistics.UnitSystem
 import com.wingspan.app.domain.report.RangeReport
+import com.wingspan.app.domain.report.ReportPosition
+import com.wingspan.app.ui.Formatters
 
 /**
  * Renders the "Model and assumptions" appendix as the last page of the exported PDF. The caller
@@ -28,7 +30,8 @@ object PdfAppendixComposer {
     fun writePage(
         document: PdfDocument,
         report: RangeReport,
-        settings: LoadSettings,
+        configLetters: Map<Long, String>,
+        units: UnitSystem,
         timestampMs: Long,
         pageNumber: Int,
         pageCount: Int,
@@ -36,7 +39,6 @@ object PdfAppendixComposer {
         val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH_PT, PAGE_HEIGHT_PT, pageNumber).create()
         val page = document.startPage(pageInfo)
         val canvas = page.canvas
-        val units = settings.unitSystem
 
         drawPageFooter(canvas, pageNumber, pageCount, timestampMs)
 
@@ -66,20 +68,58 @@ object PdfAppendixComposer {
 
         canvas.drawText("Model and assumptions", LEFT_X, 72f, titlePaint)
 
+        // One representative position per configuration letter, in order of first appearance.
+        val configEntries = LinkedHashMap<String, ReportPosition>()
+        for (position in report.positions) {
+            val letter = configLetters[position.id] ?: continue
+            if (!configEntries.containsKey(letter)) configEntries[letter] = position
+        }
+        val configCount = configEntries.size
         val firstPosition = report.positions.firstOrNull()
+
         var y = 96f
 
         y = drawSection(canvas, "Maximum range", AppendixText.MAX_RANGE, headingPaint, bodyPaint, y)
 
-        val limiter = firstPosition?.effectiveRangeLimiter ?: ""
-        val effectiveRangeText = AppendixText.effectiveRange(limiter, settings.energyThresholdFtLbf, units)
-        y = drawSection(canvas, "Effective range", effectiveRangeText, headingPaint, bodyPaint, y)
+        val primaryConfig = configEntries.values.firstOrNull() ?: firstPosition
+        val limiter = primaryConfig?.effectiveRangeLimiter ?: ""
+        val threshold = primaryConfig?.settings?.energyThresholdFtLbf ?: 0.0
+        val effectiveRangeText = AppendixText.effectiveRange(limiter, threshold, units)
+        val effectiveRangeLines = if (configCount > 1) {
+            configEntries.map { (letter, position) ->
+                AppendixText.effectiveRangeLimiterLine(
+                    letter,
+                    position.effectiveRangeLimiter,
+                    position.settings?.energyThresholdFtLbf,
+                    units,
+                )
+            }
+        } else {
+            emptyList()
+        }
+        y = drawSection(canvas, "Effective range", effectiveRangeText, headingPaint, bodyPaint, y, effectiveRangeLines)
 
         y = drawSection(canvas, "Fan geometry", AppendixText.FAN_GEOMETRY, headingPaint, bodyPaint, y)
 
-        if (AppendixText.windApplies(settings.windSpeedMph) && firstPosition != null) {
-            val windText = AppendixText.wind(settings.windSpeedMph, firstPosition.windBufferM, units)
-            y = drawSection(canvas, "Wind buffer", windText, headingPaint, bodyPaint, y)
+        fun windSpeedMph(position: ReportPosition): Double = position.settings?.windSpeedMph ?: 0.0
+
+        val windyConfig = configEntries.values.firstOrNull { AppendixText.windApplies(windSpeedMph(it)) }
+        if (windyConfig != null) {
+            val windText = AppendixText.wind(windSpeedMph(windyConfig), windyConfig.windBufferM, units)
+            val windLines = if (configCount > 1) {
+                configEntries.map { (letter, position) ->
+                    val speed = windSpeedMph(position)
+                    if (AppendixText.windApplies(speed)) {
+                        "Configuration $letter: wind ${Formatters.windSpeed(speed, units)}, " +
+                            "buffer ${Formatters.distance(position.windBufferM, units)}"
+                    } else {
+                        "Configuration $letter: no wind, buffer ${Formatters.distance(position.windBufferM, units)}"
+                    }
+                }
+            } else {
+                emptyList()
+            }
+            y = drawSection(canvas, "Wind buffer", windText, headingPaint, bodyPaint, y, windLines)
         }
 
         y = drawSection(canvas, "Bearings", AppendixText.BEARINGS, headingPaint, bodyPaint, y)
@@ -96,12 +136,14 @@ object PdfAppendixComposer {
                     y += BODY_LEADING
                     break
                 }
+                val configArg = if (configCount > 1) configLetters[position.id] else null
                 val line = AppendixText.positionLine(
                     "P${index + 1}",
                     position.positionSource,
                     position.accuracyM,
                     position.declinationDeg,
                     units,
+                    configArg,
                 )
                 y = drawWrapped(canvas, line, bodyPaint, LEFT_X, y, CONTENT_WIDTH, BODY_LEADING)
             }
@@ -122,11 +164,15 @@ object PdfAppendixComposer {
         headingPaint: Paint,
         bodyPaint: Paint,
         startY: Float,
+        extraLines: List<String> = emptyList(),
     ): Float {
         var y = startY
         canvas.drawText(heading, LEFT_X, y, headingPaint)
         y += BODY_LEADING
         y = drawWrapped(canvas, body, bodyPaint, LEFT_X, y, CONTENT_WIDTH, BODY_LEADING)
+        for (line in extraLines) {
+            y = drawWrapped(canvas, line, bodyPaint, LEFT_X, y, CONTENT_WIDTH, BODY_LEADING)
+        }
         y += SECTION_GAP
         return y
     }

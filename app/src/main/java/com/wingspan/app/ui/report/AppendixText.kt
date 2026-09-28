@@ -45,6 +45,30 @@ object AppendixText {
             "deliberately not adjusted for wind because it measures lethality rather than safety."
     }
 
+    /**
+     * One line describing a single configuration's effective-range limiter, for reports with more
+     * than one load configuration. [energyThresholdFtLbf] is null when the configuration's
+     * position was recorded before settings were frozen per position.
+     */
+    fun effectiveRangeLimiterLine(
+        letter: String,
+        limiter: String,
+        energyThresholdFtLbf: Double?,
+        units: UnitSystem,
+    ): String {
+        val limiterText = if (limiter == "energy") {
+            val thresholdText = if (energyThresholdFtLbf != null) {
+                Formatters.energy(Units.ftLbfToJoules(energyThresholdFtLbf), units)
+            } else {
+                "not recorded"
+            }
+            "limited by pellet energy (threshold $thresholdText)"
+        } else {
+            "limited by choke pattern"
+        }
+        return "Configuration $letter: $limiterText."
+    }
+
     fun windApplies(windSpeedMph: Double): Boolean = windSpeedMph > 0.0
 
     fun wind(windSpeedMph: Double, windBufferM: Double, units: UnitSystem): String {
@@ -63,6 +87,7 @@ object AppendixText {
         accuracyM: Double?,
         declinationDeg: Double,
         units: UnitSystem,
+        config: String? = null,
     ): String {
         val sourceText = when (source) {
             "GPS" -> {
@@ -79,6 +104,7 @@ object AppendixText {
             else -> source
         }
         val declinationText = "%+.1f".format(declinationDeg)
-        return "$label: $sourceText. Declination: $declinationText°."
+        val base = "$label: $sourceText. Declination: $declinationText°."
+        return if (config != null) "$base Load configuration $config." else base
     }
 }

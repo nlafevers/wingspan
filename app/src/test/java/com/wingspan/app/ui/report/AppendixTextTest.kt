@@ -25,6 +25,25 @@ class AppendixTextTest {
     }
 
     @Test
+    fun `effectiveRangeLimiterLine names the configuration, limiter and threshold`() {
+        val energyText = AppendixText.effectiveRangeLimiterLine("B", "energy", 2.0, UnitSystem.IMPERIAL)
+        val patternText = AppendixText.effectiveRangeLimiterLine("A", "pattern", 2.0, UnitSystem.IMPERIAL)
+
+        assertTrue(energyText.contains("Configuration B"))
+        assertTrue(energyText.contains("pellet energy"))
+        assertTrue(energyText.contains(Formatters.energy(Units.ftLbfToJoules(2.0), UnitSystem.IMPERIAL)))
+        assertTrue(patternText.contains("Configuration A"))
+        assertTrue(patternText.contains("choke pattern"))
+    }
+
+    @Test
+    fun `effectiveRangeLimiterLine says threshold not recorded when settings is null`() {
+        val text = AppendixText.effectiveRangeLimiterLine("C", "energy", null, UnitSystem.IMPERIAL)
+
+        assertTrue(text.contains("threshold not recorded"))
+    }
+
+    @Test
     fun `windApplies is false at zero speed and true otherwise`() {
         assertFalse(AppendixText.windApplies(0.0))
         assertTrue(AppendixText.windApplies(12.0))
@@ -63,5 +82,19 @@ class AppendixTextTest {
 
         assertTrue(text.contains("manual"))
         assertFalse(text.contains("GPS"))
+    }
+
+    @Test
+    fun `positionLine omits the configuration tag when config is null`() {
+        val text = AppendixText.positionLine("P1", "GPS", 4.0, -7.3, UnitSystem.METRIC, null)
+
+        assertFalse(text.contains("Load configuration"))
+    }
+
+    @Test
+    fun `positionLine appends the configuration tag when config is given`() {
+        val text = AppendixText.positionLine("P1", "GPS", 4.0, -7.3, UnitSystem.METRIC, "B")
+
+        assertTrue(text.contains("Load configuration B."))
     }
 }
