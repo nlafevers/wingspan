@@ -7,9 +7,6 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import com.wingspan.app.domain.ballistics.LoadSettings
 import com.wingspan.app.domain.report.RangeReport
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Renders the "Model and assumptions" appendix as the last page of the exported PDF. The caller
@@ -49,12 +46,6 @@ object PdfAppendixComposer {
             textSize = 14f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         }
-        val metaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = Color.parseColor("#616161")
-            textSize = 9f
-            typeface = Typeface.SANS_SERIF
-        }
         val headingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             color = Color.parseColor("#212121")
@@ -75,11 +66,8 @@ object PdfAppendixComposer {
 
         canvas.drawText("Model and assumptions", LEFT_X, 72f, titlePaint)
 
-        val timestampFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.US)
-        canvas.drawText("Page $pageNumber of $pageCount · ${timestampFormat.format(Date(timestampMs))}", LEFT_X, 88f, metaPaint)
-
         val firstPosition = report.positions.firstOrNull()
-        var y = 116f
+        var y = 96f
 
         y = drawSection(canvas, "Maximum range", AppendixText.MAX_RANGE, headingPaint, bodyPaint, y)
 
