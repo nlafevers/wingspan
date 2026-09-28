@@ -1309,7 +1309,7 @@ Findings that drive this phase, recorded so implementers do not re-diagnose them
   - **Verify:** `cd /home/nathan/wingspan && ./gradlew assembleDebug testDebugUnitTest`
   - **Done when:** the build succeeds and `AppendixTextTest` passes. **(manual, on device)**: the two-configuration PDF from WS-11.7 lists both configurations' limiters and wind lines and tags each position with its configuration.
 
-- [ ] **WS-11.9** Update the README for the reworked report mode (Commit: )
+- [x] **WS-11.9** Update the README for the reworked report mode (Commit: e668807)
   - **Repos:** wingspan
   - **Read:** README.md, roadmap.md
   - **Edit:** README.md
